@@ -1,0 +1,50 @@
+# Rust build artifacts
+/target
+**/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+*.icloud
+Thumbs.db
+
+# CPU profiling output
+profile.pb
+
+# Temporary vim files
+*~
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Project notes
+.note/
+
+# Debug
+core
+core.*
+
+# Environment
+.env
+.env.local
+
+# macOS
+*.dSYM
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+
+# AI model binaries (not needed in PureWarp)
+*.bin
+*.onnx
+*.model
