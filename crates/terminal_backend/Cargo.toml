@@ -1,0 +1,32 @@
+[package]
+name = "terminal_backend"
+version = "0.1.0"
+edition = "2021"
+description = "PTY session management, VTE parsing, and terminal state for PureWarp"
+authors = ["PureWarp Contributors"]
+license = "MIT"
+publish = false
+
+[dependencies]
+# PTY support
+portable-pty.workspace = true
+
+# VTE parser
+vte.workspace = true
+
+# Terminal model
+warp_terminal.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["rt-multi-thread", "sync", "macros", "io-util"] }
+futures.workspace = true
+
+# Misc
+anyhow.workspace = true
+log.workspace = true
+serde = { workspace = true, features = ["derive"] }
+smol_str.workspace = true
+pathfinder_color.workspace = true
+
+# For font metrics estimation
+unicode-width.workspace = true

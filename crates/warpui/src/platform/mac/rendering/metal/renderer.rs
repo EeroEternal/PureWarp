@@ -32,6 +32,7 @@ use std::{io::Write, os::raw::c_void};
 use warpui_core::scene::GlyphKey;
 
 const METAL_LIB_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/shaders.metallib"));
+include!(concat!(env!("OUT_DIR"), "/metal_shader_source.rs"));
 static WRITE_LIB_TO_FILE: Once = Once::new();
 
 /// A structure to help manage a single rendering pass.
@@ -144,6 +145,12 @@ impl Renderer {
                 file.write_all(METAL_LIB_BYTES).unwrap();
             });
             device.new_library_with_file(temp_lib_path).unwrap()
+        } else if METAL_LIB_BYTES.is_empty() {
+            // Metal compiler not available at build time — compile shaders at runtime
+            let options = metal::CompileOptions::new();
+            device
+                .new_library_with_source(METAL_SHADER_SOURCE, &options)
+                .expect("Failed to compile Metal shaders at runtime. Install Xcode: xcode-select --install")
         } else {
             device.new_library_with_data(METAL_LIB_BYTES).unwrap()
         };

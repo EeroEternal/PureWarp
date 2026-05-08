@@ -88,9 +88,19 @@ fn compile_metal_shaders() {
         .unwrap_or(false);
 
     if !metal_available {
-        println!("cargo:warning=metal compiler not found, creating empty metallib. GPU rendering may not work.");
-        // Create an empty metallib file so the build doesn't fail
+        println!("cargo:warning=metal compiler not found, using runtime shader compilation. GPU rendering may be slower.");
+        // Create an empty metallib file so include_bytes! compiles (will be replaced at runtime)
         std::fs::write(lib_path, []).ok();
+        // Embed shader source for runtime compilation via new_library_with_source
+        let header_src = std::fs::read_to_string(header_path).unwrap_or_default();
+        let metal_src = std::fs::read_to_string(metal_path).unwrap_or_default();
+        // Inline the header: remove the #include directive and append header content
+        let combined_src = metal_src.replace("#include \"shader_types.h\"", &header_src);
+        let rust_src = format!(
+            "pub const METAL_SHADER_SOURCE: &str = r###\"{}\"###;\n",
+            combined_src
+        );
+        std::fs::write(out_path.join("metal_shader_source.rs"), rust_src).unwrap();
         return;
     }
 
@@ -118,6 +128,8 @@ fn compile_metal_shaders() {
         "error compling metal shaders to .metallib; {}",
         std::str::from_utf8(&result.stderr).unwrap(),
     );
+    // Generate empty shader source (not needed when metallib is pre-compiled)
+    std::fs::write(out_path.join("metal_shader_source.rs"), "pub const METAL_SHADER_SOURCE: &str = \"\";\n").unwrap();
 }
 
 fn compile_objc_lib() {

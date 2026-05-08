@@ -19,12 +19,14 @@ warp_terminal.workspace = true
 warp_core.workspace = true
 warp_util.workspace = true
 warp_editor.workspace = true
+terminal_backend.workspace = true
 
 # External
 anyhow.workspace = true
 log.workspace = true
 env_logger.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+futures.workspace = true
 winit.workspace = true
 clap.workspace = true
 serde = { workspace = true, features = ["derive"] }
