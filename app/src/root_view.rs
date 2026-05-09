@@ -99,64 +99,56 @@ impl View for RootView {
         for (row_idx, row) in display_rows.iter().enumerate() {
             let cells: &[warp_terminal::model::grid::cell::Cell] = &row[..];
 
-            // Build the row text: collect every printable character.
-            let row_text: String = cells
-                .iter()
-                .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
-                .collect();
-
             // Cursor is only visible when scroll_offset == 0 (viewing the live area).
             let is_cursor_row = scroll_offset == 0
                 && cursor_visible
                 && row_idx + start == sb_len + cursor_row;
 
             let row_element = if let Some(fid) = font_family {
-                if is_cursor_row && cursor_col < cells.len() {
-                    // ── Cursor row: render each cell individually for equal width ──
-                    let mut cell_elements: Vec<Box<dyn Element>> =
-                        Vec::with_capacity(cells.len());
-                    for (col, cell) in cells.iter().enumerate() {
-                        let ch = if cell.c == '\0' || cell.c.is_ascii_control() {
-                            ' '
-                        } else {
-                            cell.c
-                        };
-                        if col == cursor_col {
-                            // Cursor cell: inverted colors
-                            let cursor_cell = Stack::new()
-                                .with_child(
-                                    Rect::new()
-                                        .with_background_color(cursor_color)
-                                        .finish(),
-                                )
-                                .with_child(
-                                    Text::new_inline(ch.to_string(), fid, FONT_SIZE)
-                                        .with_color(bg_color)
-                                        .finish(),
-                                )
-                                .finish();
-                            cell_elements.push(
-                                Shrinkable::new(1.0, cursor_cell).finish(),
-                            );
-                        } else {
-                            let cell_element = Text::new_inline(
-                                ch.to_string(),
-                                fid,
-                                FONT_SIZE,
+                // ── Render every row as individual cells for stable layout ──
+                // (Cursor on/off must not change the layout, otherwise
+                //  text jitters horizontally during blink.)
+                let mut cell_elements: Vec<Box<dyn Element>> =
+                    Vec::with_capacity(cells.len());
+                let cursor_visible_on_this_row = is_cursor_row
+                    && cursor_col < cells.len();
+                for (col, cell) in cells.iter().enumerate() {
+                    let ch = if cell.c == '\0' || cell.c.is_ascii_control() {
+                        ' '
+                    } else {
+                        cell.c
+                    };
+                    if cursor_visible_on_this_row && col == cursor_col {
+                        // Cursor cell: inverted colors
+                        let cursor_cell = Stack::new()
+                            .with_child(
+                                Rect::new()
+                                    .with_background_color(cursor_color)
+                                    .finish(),
                             )
-                            .with_color(fg_color)
+                            .with_child(
+                                Text::new_inline(ch.to_string(), fid, FONT_SIZE)
+                                    .with_color(bg_color)
+                                    .finish(),
+                            )
                             .finish();
-                            cell_elements.push(
-                                Shrinkable::new(1.0, cell_element).finish(),
-                            );
-                        }
-                    }
-                    Flex::row().with_children(cell_elements).finish()
-                } else {
-                    Text::new_inline(row_text, fid, FONT_SIZE)
+                        cell_elements.push(
+                            Shrinkable::new(1.0, cursor_cell).finish(),
+                        );
+                    } else {
+                        let cell_element = Text::new_inline(
+                            ch.to_string(),
+                            fid,
+                            FONT_SIZE,
+                        )
                         .with_color(fg_color)
-                        .finish()
+                        .finish();
+                        cell_elements.push(
+                            Shrinkable::new(1.0, cell_element).finish(),
+                        );
+                    }
                 }
+                Flex::row().with_children(cell_elements).finish()
             } else {
                 let row_bg = if is_cursor_row {
                     cursor_color
