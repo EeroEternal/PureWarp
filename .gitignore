@@ -44,6 +44,10 @@ core.*
 *.tar.gz
 *.tgz
 
+# Distribution
+/dist
+*.dmg
+
 # AI model binaries (not needed in PureWarp)
 *.bin
 *.onnx
