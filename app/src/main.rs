@@ -66,6 +66,12 @@ fn main() -> Result<()> {
 
     eprintln!("PTY spawned: {}", config.shell.program);
 
+    // Suppress zsh PROMPT_SP to avoid spurious blank lines after commands.
+    // (PROMPT_EOL_MARK='' hides the '%' but the newline remains.)
+    {
+        let _ = pty_session.write_input(b"unsetopt PROMPT_SP\n");
+    }
+
     let update_rx = pty_session
         .take_receiver()
         .expect("PTY update receiver should be available");
