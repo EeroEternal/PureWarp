@@ -1,6 +1,6 @@
 [package]
 name = "pure_warp"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A pure terminal emulator, based on Warp's GPU rendering engine, without AI"
 authors = ["PureWarp Contributors"]

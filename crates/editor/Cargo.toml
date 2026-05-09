@@ -1,7 +1,7 @@
 [package]
 name = "warp_editor"
 authors = ["Warp Team <dev@warp.dev>"]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Text editing for Warp"
 exclude = ["test_data/*",]
