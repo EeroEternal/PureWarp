@@ -1,8 +1,10 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use futures::StreamExt;
 use terminal_backend::{PtySession, TerminalState};
+use warp_terminal::model::grid::Dimensions;
 use warpui::{
     elements::{
         Container, DispatchEventResult, EventHandler, Flex, MainAxisSize, Padding,
@@ -24,6 +26,8 @@ pub struct RootView {
     update_rx: RefCell<Option<futures::channel::mpsc::UnboundedReceiver<()>>>,
     /// Font family for rendering cell characters, loaded lazily on first focus.
     font_family: Option<FamilyId>,
+    /// How many lines the user has scrolled back (0 = at bottom, following output).
+    scroll_offset: Rc<RefCell<usize>>,
 }
 
 impl RootView {
@@ -38,6 +42,7 @@ impl RootView {
             pty,
             update_rx: RefCell::new(Some(update_rx)),
             font_family: None,
+            scroll_offset: Rc::new(RefCell::new(0)),
         }
     }
 }
@@ -53,7 +58,6 @@ impl View for RootView {
 
     fn render(&self, _app: &AppContext) -> Box<dyn Element> {
         let state = self.terminal_state.lock().unwrap();
-        let visible_rows = state.visible_rows_ref();
         let bg_color = state.palette.background;
         let fg_color = state.palette.foreground;
         let cursor_color = state.palette.cursor;
@@ -61,14 +65,33 @@ impl View for RootView {
         let cursor_col = state.cursor.col;
         let cursor_visible = state.cursor.visible;
         let font_family = self.font_family;
+        let visible_count = state.visible_rows();
 
-        let pty = self.pty.clone();
+        // ── Build display rows from scrollback + visible, respecting scroll offset ──
+        let scroll_offset = *self.scroll_offset.borrow();
+        let sb = state.scrollback_ref();
+        let vis = state.visible_rows_ref();
+        let sb_len = sb.len();
+        let total = sb_len + vis.len();
 
-        // ── Row-based rendering (much faster than per-cell) ──
-        // Each row becomes a single Text element containing concatenated characters.
-        let mut row_elements: Vec<Box<dyn Element>> = Vec::with_capacity(visible_rows.len());
+        // Which range of the combined buffer to show.
+        let start = total.saturating_sub(visible_count + scroll_offset);
 
-        for (row_idx, row) in visible_rows.iter().enumerate() {
+        // Collect the rows for display.
+        let mut display_rows: Vec<&warp_terminal::model::grid::row::Row> =
+            Vec::with_capacity(visible_count);
+        for i in start..(start + visible_count).min(total) {
+            if i < sb_len {
+                display_rows.push(&sb[i]);
+            } else {
+                display_rows.push(&vis[i - sb_len]);
+            }
+        }
+
+        // ── Row-based rendering ──
+        let mut row_elements: Vec<Box<dyn Element>> = Vec::with_capacity(display_rows.len());
+
+        for (row_idx, row) in display_rows.iter().enumerate() {
             let cells: &[warp_terminal::model::grid::cell::Cell] = &row[..];
 
             // Build the row text: collect every printable character.
@@ -77,13 +100,13 @@ impl View for RootView {
                 .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
                 .collect();
 
-            let is_cursor_row = row_idx == cursor_row && cursor_visible;
+            // Cursor is only visible when scroll_offset == 0 (viewing the live area).
+            let is_cursor_row = scroll_offset == 0
+                && cursor_visible
+                && row_idx + start == sb_len + cursor_row;
 
             let row_element = if let Some(fid) = font_family {
                 if is_cursor_row && cursor_col < cells.len() {
-                    // Row containing the cursor.
-                    // For now render the whole row in foreground colour;
-                    // cursor highlighting will be refined later.
                     Text::new_inline(row_text, fid, FONT_SIZE)
                         .with_color(fg_color)
                         .finish()
@@ -93,7 +116,6 @@ impl View for RootView {
                         .finish()
                 }
             } else {
-                // Font not yet loaded – show a coloured placeholder row.
                 let row_bg = if is_cursor_row {
                     cursor_color
                 } else {
@@ -110,9 +132,9 @@ impl View for RootView {
             .with_children(row_elements)
             .finish();
 
-        // Padding: inset the grid from window edges.
+        // Padding: inset the grid from window edges (top has extra space).
         let padded_grid = Container::new(grid)
-            .with_padding(Padding::uniform(16.0))
+            .with_padding(Padding::uniform(16.0).with_top(32.0))
             .finish();
 
         // Full-window background behind the grid.
@@ -121,22 +143,40 @@ impl View for RootView {
             .with_child(padded_grid)
             .finish();
 
-        // ── Keyboard input via outermost EventHandler ──
+        let pty = self.pty.clone();
+        let scroll_offset_rc = self.scroll_offset.clone();
+        let max_scroll = sb_len;
+
+        // ── Keyboard + scroll wheel events via outermost EventHandler ──
         EventHandler::new(content)
             .on_keydown(
                 move |_event_ctx: &mut EventContext,
                       _app: &AppContext,
                       keystroke: &warpui::keymap::Keystroke|
                       -> DispatchEventResult {
-                    eprintln!("Key event received: {:?}", keystroke);
                     let bytes = terminal_keystroke_to_bytes(keystroke);
                     if !bytes.is_empty() {
-                        eprintln!("  -> sending {} bytes to PTY", bytes.len());
                         if let Ok(pty_guard) = pty.lock() {
-                            if let Err(e) = pty_guard.write_input(&bytes) {
-                                eprintln!("  -> PTY write error: {}", e);
-                            }
+                            let _ = pty_guard.write_input(&bytes);
                         }
+                    }
+                    DispatchEventResult::StopPropagation
+                },
+            )
+            .on_scroll_wheel(
+                move |_ctx: &mut EventContext,
+                      _app: &AppContext,
+                      delta: &warpui::geometry::vector::Vector2F,
+                      _modifiers: &warpui::event::ModifiersState|
+                      -> DispatchEventResult {
+                    let mut offset = scroll_offset_rc.borrow_mut();
+                    let lines = (delta.y().abs() / 20.0) as usize; // 20px per "line"
+                    if delta.y() > 0.0 {
+                        // Scroll up = go further back
+                        *offset = (*offset + lines.max(1)).min(max_scroll);
+                    } else if delta.y() < 0.0 {
+                        // Scroll down = go toward bottom
+                        *offset = offset.saturating_sub(lines.max(1));
                     }
                     DispatchEventResult::StopPropagation
                 },
@@ -163,9 +203,12 @@ impl View for RootView {
 
         if let Some(rx) = self.update_rx.borrow_mut().take() {
             let stream = rx.map(|_| ());
+            let scroll_offset = self.scroll_offset.clone();
             ctx.spawn_stream_local(
                 stream,
-                |_view, _item, ctx| {
+                move |_view, _item, ctx| {
+                    // Reset scroll to bottom whenever new PTY output arrives.
+                    *scroll_offset.borrow_mut() = 0;
                     ctx.notify();
                 },
                 |_view, ctx| {

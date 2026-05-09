@@ -357,6 +357,16 @@ impl TerminalState {
         &self.visible_rows
     }
 
+    /// Get a reference to all scrollback rows.
+    pub fn scrollback_ref(&self) -> &[Row] {
+        &self.scrollback
+    }
+
+    /// Number of lines in the scrollback buffer.
+    pub fn scrollback_len(&self) -> usize {
+        self.scrollback.len()
+    }
+
     /// Get a mutable reference to all visible rows.
     pub fn visible_rows_mut(&mut self) -> &mut [Row] {
         &mut self.visible_rows
