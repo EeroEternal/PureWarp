@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
 use futures::StreamExt;
@@ -263,10 +264,9 @@ impl View for RootView {
         // ── Cursor blink timer ──
         let blink_on = self.blink_on.clone();
         let (blink_tx, blink_rx) = futures::channel::mpsc::unbounded::<()>();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_millis(530));
+        thread::spawn(move || {
             loop {
-                interval.tick().await;
+                thread::sleep(Duration::from_millis(530));
                 let _ = blink_tx.unbounded_send(());
             }
         });

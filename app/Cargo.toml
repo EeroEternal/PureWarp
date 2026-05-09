@@ -25,7 +25,7 @@ terminal_backend.workspace = true
 anyhow.workspace = true
 log.workspace = true
 env_logger.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 futures.workspace = true
 winit.workspace = true
 clap.workspace = true
