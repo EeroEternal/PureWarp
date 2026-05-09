@@ -112,47 +112,46 @@ impl View for RootView {
 
             let row_element = if let Some(fid) = font_family {
                 if is_cursor_row && cursor_col < cells.len() {
-                    // ── Cursor row: split into before / cursor-cell / after ──
-                    let before = &row_text[..cursor_col.min(row_text.len())];
-                    let cursor_ch = &row_text[cursor_col..(cursor_col + 1).min(row_text.len())];
-                    let after = &row_text[(cursor_col + 1).min(row_text.len())..];
-
-                    let before_text = Text::new_inline(before.to_string(), fid, FONT_SIZE)
-                        .with_color(fg_color)
-                        .finish();
-                    let after_text = Text::new_inline(after.to_string(), fid, FONT_SIZE)
-                        .with_color(fg_color)
-                        .finish();
-
-                    // Cursor cell: inverted background/text
-                    let cursor_cell = Stack::new()
-                        .with_child(
-                            Rect::new()
-                                .with_background_color(cursor_color)
-                                .finish(),
-                        )
-                        .with_child(
-                            Text::new_inline(cursor_ch.to_string(), fid, FONT_SIZE)
-                                .with_color(bg_color)
-                                .finish(),
-                        )
-                        .finish();
-
-                    // Flex factors proportional to character count for equal-width columns
-                    let before_len = before.chars().count() as f32;
-                    let after_len = after.chars().count() as f32;
-
-                    Flex::row()
-                        .with_child(
-                            Shrinkable::new(before_len, before_text).finish(),
-                        )
-                        .with_child(
-                            Shrinkable::new(1.0, cursor_cell).finish(),
-                        )
-                        .with_child(
-                            Shrinkable::new(after_len, after_text).finish(),
-                        )
-                        .finish()
+                    // ── Cursor row: render each cell individually for equal width ──
+                    let mut cell_elements: Vec<Box<dyn Element>> =
+                        Vec::with_capacity(cells.len());
+                    for (col, cell) in cells.iter().enumerate() {
+                        let ch = if cell.c == '\0' || cell.c.is_ascii_control() {
+                            ' '
+                        } else {
+                            cell.c
+                        };
+                        if col == cursor_col {
+                            // Cursor cell: inverted colors
+                            let cursor_cell = Stack::new()
+                                .with_child(
+                                    Rect::new()
+                                        .with_background_color(cursor_color)
+                                        .finish(),
+                                )
+                                .with_child(
+                                    Text::new_inline(ch.to_string(), fid, FONT_SIZE)
+                                        .with_color(bg_color)
+                                        .finish(),
+                                )
+                                .finish();
+                            cell_elements.push(
+                                Shrinkable::new(1.0, cursor_cell).finish(),
+                            );
+                        } else {
+                            let cell_element = Text::new_inline(
+                                ch.to_string(),
+                                fid,
+                                FONT_SIZE,
+                            )
+                            .with_color(fg_color)
+                            .finish();
+                            cell_elements.push(
+                                Shrinkable::new(1.0, cell_element).finish(),
+                            );
+                        }
+                    }
+                    Flex::row().with_children(cell_elements).finish()
                 } else {
                     Text::new_inline(row_text, fid, FONT_SIZE)
                         .with_color(fg_color)
