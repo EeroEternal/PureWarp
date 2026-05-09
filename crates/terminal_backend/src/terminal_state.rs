@@ -375,7 +375,8 @@ impl TerminalState {
     /// Write a character at the current cursor position and advance.
     pub fn write_char(&mut self, c: char) {
         if c == '\n' {
-            // Line Feed – move cursor down, do NOT reset column.
+            // ONLCR emulation: reset column + move down.
+            self.cursor.col = 0;
             self.cursor.row += 1;
             if self.cursor.row >= self.rows {
                 self.scroll_up(1);

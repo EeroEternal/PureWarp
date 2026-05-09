@@ -28,6 +28,7 @@ impl AssetProvider for Assets {
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
     eprintln!("=== PureWarp starting ===");
 
     // Load configuration

@@ -65,8 +65,11 @@ impl PtySession {
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
 
-        // Set TERM_PROGRAM so shell configs can detect PureWarp
+        // Identify terminal to shell
         cmd.env("TERM_PROGRAM", "purewarp");
+        // Suppress zsh's PROMPT_SP '%' – PureWarp handles cursor tracking
+        // internally and shell- side assumptions may differ.
+        cmd.env("PROMPT_EOL_MARK", "");
 
         // Spawn the child process
         let child = pair

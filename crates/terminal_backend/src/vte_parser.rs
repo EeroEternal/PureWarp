@@ -42,8 +42,10 @@ impl Perform for VteHandler<'_> {
     fn execute(&mut self, byte: u8) {
         match byte {
             b'\n' => {
-                // Line Feed – move cursor down, do NOT reset column.
-                // (CR alone resets column; shells use CR+LF for newline.)
+                // Line Feed + implicit Carriage Return (ONLCR emulation).
+                // PTY output processing may or may not convert \n to \r\n;
+                // we unconditionally reset column so cursor tracking stays correct.
+                self.state.cursor.col = 0;
                 self.state.cursor.row += 1;
                 if self.state.cursor.row >= self.state.rows {
                     self.state.scroll_up(1);
@@ -267,10 +269,12 @@ impl Perform for VteHandler<'_> {
                     let row = self.state.cursor.row.saturating_add(1);
                     let col = self.state.cursor.col.saturating_add(1);
                     let response = format!("\x1b[{};{}R", row, col);
-                    log::trace!("DSR: cursor position report -> {}", response);
+                    log::info!("DSR: cursor position report -> row={} col={}", row, col);
                     if let Some(ref mut writer) = self.writer {
                         let _ = writer.write_all(response.as_bytes());
                         let _ = writer.flush();
+                    } else {
+                        log::warn!("DSR: no writer available to send response!");
                     }
                 }
             }
