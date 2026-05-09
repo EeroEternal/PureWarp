@@ -250,6 +250,16 @@ impl Perform for VteHandler<'_> {
                 // Character Attributes (SGR)
                 self.handle_sgr(params);
             }
+            'c' => {
+                // Device Attributes (DA) — Primary
+                // Respond with VT100 + Advanced Video Option
+                let response = b"\x1b[?1;2c";
+                log::trace!("DA: primary attributes request");
+                if let Some(ref mut writer) = self.writer {
+                    let _ = writer.write_all(response);
+                    let _ = writer.flush();
+                }
+            }
             'n' => {
                 // Device Status Report
                 if params.iter().next().and_then(|p| p.first().copied()) == Some(6) {
