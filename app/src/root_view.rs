@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use futures::StreamExt;
 use terminal_backend::{PtySession, TerminalState};
@@ -28,6 +29,8 @@ pub struct RootView {
     font_family: Option<FamilyId>,
     /// How many lines the user has scrolled back (0 = at bottom, following output).
     scroll_offset: Rc<RefCell<usize>>,
+    /// Blink state: toggled by a periodic timer.
+    blink_on: Rc<RefCell<bool>>,
 }
 
 impl RootView {
@@ -43,6 +46,7 @@ impl RootView {
             update_rx: RefCell::new(Some(update_rx)),
             font_family: None,
             scroll_offset: Rc::new(RefCell::new(0)),
+            blink_on: Rc::new(RefCell::new(true)),
         }
     }
 }
@@ -63,7 +67,7 @@ impl View for RootView {
         let cursor_color = state.palette.cursor;
         let cursor_row = state.cursor.row;
         let cursor_col = state.cursor.col;
-        let cursor_visible = state.cursor.visible;
+        let cursor_visible = state.cursor.visible && *self.blink_on.borrow();
         let font_family = self.font_family;
         let visible_count = state.visible_rows();
 
@@ -107,8 +111,46 @@ impl View for RootView {
 
             let row_element = if let Some(fid) = font_family {
                 if is_cursor_row && cursor_col < cells.len() {
-                    Text::new_inline(row_text, fid, FONT_SIZE)
+                    // ── Cursor row: split into before / cursor-cell / after ──
+                    let before = &row_text[..cursor_col.min(row_text.len())];
+                    let cursor_ch = &row_text[cursor_col..(cursor_col + 1).min(row_text.len())];
+                    let after = &row_text[(cursor_col + 1).min(row_text.len())..];
+
+                    let before_text = Text::new_inline(before.to_string(), fid, FONT_SIZE)
                         .with_color(fg_color)
+                        .finish();
+                    let after_text = Text::new_inline(after.to_string(), fid, FONT_SIZE)
+                        .with_color(fg_color)
+                        .finish();
+
+                    // Cursor cell: inverted background/text
+                    let cursor_cell = Stack::new()
+                        .with_child(
+                            Rect::new()
+                                .with_background_color(cursor_color)
+                                .finish(),
+                        )
+                        .with_child(
+                            Text::new_inline(cursor_ch.to_string(), fid, FONT_SIZE)
+                                .with_color(bg_color)
+                                .finish(),
+                        )
+                        .finish();
+
+                    // Flex factors proportional to character count for equal-width columns
+                    let before_len = before.chars().count() as f32;
+                    let after_len = after.chars().count() as f32;
+
+                    Flex::row()
+                        .with_child(
+                            Shrinkable::new(before_len, before_text).finish(),
+                        )
+                        .with_child(
+                            Shrinkable::new(1.0, cursor_cell).finish(),
+                        )
+                        .with_child(
+                            Shrinkable::new(after_len, after_text).finish(),
+                        )
                         .finish()
                 } else {
                     Text::new_inline(row_text, fid, FONT_SIZE)
@@ -217,6 +259,26 @@ impl View for RootView {
                 },
             );
         }
+
+        // ── Cursor blink timer ──
+        let blink_on = self.blink_on.clone();
+        let (blink_tx, blink_rx) = futures::channel::mpsc::unbounded::<()>();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(530));
+            loop {
+                interval.tick().await;
+                let _ = blink_tx.unbounded_send(());
+            }
+        });
+        ctx.spawn_stream_local(
+            blink_rx.map(|_| ()),
+            move |_view, _item, ctx| {
+                let mut b = blink_on.borrow_mut();
+                *b = !*b;
+                ctx.notify();
+            },
+            |_, _| {},
+        );
     }
 
     fn keymap_context(&self, _app: &AppContext) -> warpui::keymap::Context {
