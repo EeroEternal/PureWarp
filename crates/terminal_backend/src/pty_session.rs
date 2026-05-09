@@ -67,9 +67,9 @@ impl PtySession {
 
         // Identify terminal to shell
         cmd.env("TERM_PROGRAM", "purewarp");
-        // Suppress zsh's PROMPT_SP '%' – PureWarp handles cursor tracking
-        // internally and shell- side assumptions may differ.
-        cmd.env("PROMPT_EOL_MARK", "");
+        // Suppress zsh's PROMPT_SP to avoid spurious '%' / blank lines.
+        cmd.arg("-o");
+        cmd.arg("NO_PROMPT_SP");
 
         // Spawn the child process
         let child = pair
