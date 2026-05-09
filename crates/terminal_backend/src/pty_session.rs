@@ -22,6 +22,7 @@ pub struct PtySession {
     /// The writer end, shared with the input handler.
     pub writer: PtyWriter,
     /// Handle to the child process (as a ChildKiller for sending signals).
+    #[allow(dead_code)]
     child: Box<dyn ChildKiller + Send + Sync>,
     /// Channel sender for notifying renderer of terminal updates.
     update_tx: mpsc::UnboundedSender<()>,

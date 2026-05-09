@@ -34,6 +34,12 @@
 #import <netinet6/in6.h>
 #import <sys/socket.h>
 
+// Suppress deprecation warnings for SCNetworkReachability APIs.
+// This is a third-party library; migrating to NWPathMonitor would
+// require a full rewrite of the reachability module.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 NSString *const kReachabilityChangedNotification = @"kReachabilityChangedNotification";
 
 @interface Reachability ()
@@ -441,3 +447,5 @@ static void TMReachabilityCallback(SCNetworkReachabilityRef target,
 }
 
 @end
+
+#pragma clang diagnostic pop

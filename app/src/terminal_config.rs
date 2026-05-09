@@ -264,6 +264,7 @@ pub fn load_config() -> PureWarpConfig {
 }
 
 /// Create the default config directory and write a default config file.
+#[allow(dead_code)]
 pub fn ensure_default_config() -> Result<()> {
     let config_dir = dirs::config_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))

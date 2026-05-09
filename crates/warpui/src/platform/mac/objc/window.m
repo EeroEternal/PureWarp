@@ -10,6 +10,9 @@
 #import "host_view.h"
 #import "window_blur.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 // NSWindow.delegate is a weak reference, so the WarpWindowDelegate we create in
 // `create_warp_nswindow` / `create_warp_nspanel` would otherwise be leaked with a +1
 // retain count. Associating it with the window ties its lifetime to the window: the
@@ -1064,3 +1067,5 @@ void order_front_without_focus(WarpWindow<WarpWindowProtocol> *window, NSPoint o
     [window setFrameOrigin:origin];
     [window orderFront:nil];
 }
+
+#pragma clang diagnostic pop

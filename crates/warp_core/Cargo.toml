@@ -6,6 +6,7 @@ publish.workspace = true
 license.workspace = true
 
 [features]
+crash_reporting = []
 integration_tests = []
 local_fs = []
 release_bundle = []
