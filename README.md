@@ -1,4 +1,4 @@
-# PureWarp
+# <img src="web/logo.svg" width="28" alt=""> PureWarp
 
 A clean terminal core stripped from [Warp](https://www.warp.dev) — no AI, no cloud, just GPU-accelerated rendering.
 

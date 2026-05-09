@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PureWarp · GPU Terminal</title>
+  <meta name="description" content="A GPU-accelerated terminal emulator stripped from Warp — no AI, no cloud, just fast Metal rendering.">
+  <meta property="og:title" content="PureWarp">
+  <meta property="og:description" content="GPU-accelerated terminal emulator. No AI, no cloud, just speed.">
+  <meta property="og:url" content="https://purewarp.dev">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <main class="page">
+
+    <!-- ── Hero ──────────────────────────────────────── -->
+    <section class="hero">
+
+      <!-- Logo -->
+      <div class="logo">
+        <img src="logo.svg" alt="PureWarp" width="72" height="72">
+      </div>
+
+      <p class="hero-tagline">
+        GPU-accelerated terminal emulator.<br>
+        Stripped from Warp. No AI, no cloud, no bloat.
+      </p>
+
+      <div class="hero-links">
+        <a href="https://github.com/EeroEternal/PureWarp" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">◐</button>
+      </div>
+
+      <div class="install-block">
+        <a href="https://github.com/EeroEternal/PureWarp/releases/latest" target="_blank" rel="noopener" class="download-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for macOS
+        </a>
+      </div>
+
+      <!-- PureWarp screenshot mockup -->
+      <div class="screenshot">
+        <svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">
+          <!-- Window frame -->
+          <rect x="0" y="0" width="640" height="360" rx="10" fill="#0f1923" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+          <!-- Title bar -->
+          <rect x="0" y="0" width="640" height="36" rx="10" fill="#1a1a2e"/>
+          <rect x="0" y="18" width="640" height="18" fill="#1a1a2e"/>
+          <!-- Traffic lights -->
+          <circle cx="20" cy="18" r="6" fill="#ff5f57"/>
+          <circle cx="40" cy="18" r="6" fill="#febc2e"/>
+          <circle cx="60" cy="18" r="6" fill="#28c840"/>
+          <text x="320" y="23" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#6a7a90">purewarp</text>
+
+          <!-- Prompt line 1 -->
+          <text x="20" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">❯</text>
+          <text x="38" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#cdd6f4">uname -a</text>
+
+          <!-- Output 1 -->
+          <text x="20" y="96" font-family="JetBrains Mono,monospace" font-size="12" fill="#6a7a90">Darwin mac.local 24.4.0 arm64</text>
+
+          <!-- Prompt line 2 -->
+          <text x="20" y="130" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">❯</text>
+          <text x="38" y="130" font-family="JetBrains Mono,monospace" font-size="13" fill="#cdd6f4">cargo build --release</text>
+
+          <!-- Output 2 -->
+          <text x="20" y="156" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Compiling</text>
+          <text x="110" y="156" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">terminal_backend v0.1.0</text>
+          <text x="20" y="176" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Compiling</text>
+          <text x="110" y="176" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">warpui v0.0.0</text>
+          <text x="20" y="196" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Compiling</text>
+          <text x="110" y="196" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">pure_warp v0.1.0</text>
+          <text x="20" y="222" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Finished</text>
+          <text x="100" y="222" font-family="JetBrains Mono,monospace" font-size="12" fill="#f9e2af">release</text>
+          <text x="170" y="222" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">[optimized] target(s) in 2.41s</text>
+
+          <!-- Prompt line 3 -->
+          <text x="20" y="256" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">❯</text>
+          <text x="38" y="256" font-family="JetBrains Mono,monospace" font-size="13" fill="#cdd6f4">ls -la crates/</text>
+
+          <!-- Output 3 -->
+          <circle cx="20" cy="278" r="3" fill="#7aa2f7"/>
+          <text x="30" y="282" font-family="JetBrains Mono,monospace" font-size="12" fill="#7aa2f7">terminal_backend</text>
+          <circle cx="190" cy="278" r="3" fill="#bb9af7"/>
+          <text x="200" y="282" font-family="JetBrains Mono,monospace" font-size="12" fill="#bb9af7">warpui</text>
+          <circle cx="272" cy="278" r="3" fill="#f9e2af"/>
+          <text x="282" y="282" font-family="JetBrains Mono,monospace" font-size="12" fill="#f9e2af">warpui_core</text>
+
+          <circle cx="20" cy="304" r="3" fill="#a6e3a1"/>
+          <text x="30" y="308" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">editor</text>
+          <circle cx="100" cy="304" r="3" fill="#f7768e"/>
+          <text x="110" y="308" font-family="JetBrains Mono,monospace" font-size="12" fill="#f7768e">languages</text>
+          <circle cx="200" cy="304" r="3" fill="#e0af68"/>
+          <text x="210" y="308" font-family="JetBrains Mono,monospace" font-size="12" fill="#e0af68">settings</text>
+
+          <!-- Cursor -->
+          <rect x="20" y="326" width="8" height="14" rx="2" fill="#00d4aa" opacity="0.9"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ── Content ───────────────────────────────────── -->
+
+    <section class="content">
+
+      <h2>Why PureWarp?</h2>
+      <p>
+        PureWarp is a <strong>GPU-accelerated terminal emulator</strong> for macOS, rebuilt from the Warp codebase. We stripped out AI assistants, cloud sync, team accounts, and telemetry — leaving only the fast Metal rendering engine that draws every glyph on the GPU.
+      </p>
+
+      <h2>Hardware-accelerated rendering</h2>
+      <p>
+        Unlike Electron-based terminals, PureWarp uses <strong>Metal shaders</strong> to render text directly on the GPU. Each character is drawn via compiled shader programs — no HTML, no DOM, no JavaScript layout engine. The result is buttery-smooth scrolling and sub-millisecond input latency.
+      </p>
+
+      <h2>Native PTY integration</h2>
+      <p>
+        Runs your shell directly through a real pseudo-terminal. zsh, bash, fish — whatever you use, PureWarp connects to it natively. Full support for ANSI / VT100 / xterm escape sequences via a custom UTF-8 state-machine parser.
+      </p>
+
+      <h2>Scrollback that just works</h2>
+      <p>
+        Up to 1,000 lines of scrollback history. Mouse wheel to scroll, and new output automatically snaps you back to the bottom. Configurable via TOML.
+      </p>
+
+      <h2>Custom theming</h2>
+      <p>
+        Tweak colors, cursor style, and terminal behavior through a simple TOML config file. No GUI settings panels — edit your config, save, and see changes immediately.
+      </p>
+
+      <h2>Single binary</h2>
+      <p>
+        Written in Rust. Compiles to a single, fast binary. Install via Homebrew, download the DMG, or build from source with Cargo. No runtime, no containers, no nonsense.
+      </p>
+      <div class="code-block">
+        <code>$ cargo install --git https://github.com/EeroEternal/PureWarp pure_warp</code>
+      </div>
+
+      <h2>No bloat</h2>
+      <p>
+        No AI chat sidebar. No cloud sync. No team collaboration features. No sign-in wall. No telemetry phoning home. Just you, your shell, and a fast terminal.
+      </p>
+
+    </section>
+
+    <!-- ── Footer ─────────────────────────────────────── -->
+    <footer class="footer">
+      <p>MIT Licensed · <a href="https://github.com/EeroEternal/PureWarp" target="_blank" rel="noopener">Source on GitHub</a></p>
+    </footer>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

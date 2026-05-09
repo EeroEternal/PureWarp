@@ -24,6 +24,8 @@
 	<string>13.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>CFBundleIconFile</key>
+	<string>purewarp</string>
 	<key>LSUIElement</key>
 	<false/>
 </dict>

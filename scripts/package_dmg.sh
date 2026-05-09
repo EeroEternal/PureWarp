@@ -15,6 +15,7 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/purewarp"
 cp "$PLIST"   "$APP_BUNDLE/Contents/Info.plist"
+cp "app/assets/purewarp.icns" "$APP_BUNDLE/Contents/Resources/purewarp.icns"
 
 # ── Create DMG ──
 DMG_NAME="${APP_NAME}-${VERSION}-macOS.dmg"

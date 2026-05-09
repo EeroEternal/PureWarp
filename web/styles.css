@@ -1,0 +1,334 @@
+/* ═══════════════════════════════════════════════════════════════
+   purewarp.dev — Terminal-inspired landing page
+   Dual theme: Dark / Terminal Green
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ── Variables ──────────────────────────────────────────────── */
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --transition: 0.25s ease;
+  --content-width: 640px;
+}
+
+/* ── Dark Theme ─────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #0b0b0f;
+  --text: #c8c8d0;
+  --text-muted: #6a6a80;
+  --heading: #e4e4eb;
+  --accent: #00d4aa;
+  --accent-dim: rgba(0, 212, 170, 0.12);
+  --link: #00c49a;
+  --link-hover: #33e0bc;
+  --border: rgba(255, 255, 255, 0.07);
+  --code-bg: rgba(255, 255, 255, 0.05);
+  --code-text: #80d4c0;
+  --install-bg: rgba(0, 212, 170, 0.06);
+  --install-border: rgba(0, 212, 170, 0.15);
+  --terminal-bg: #0f1923;
+  --terminal-text: #cdd6f4;
+  --terminal-muted: #6a7a90;
+  --terminal-prompt: #00d4aa;
+  --footer-text: #44445a;
+}
+
+/* ── Light Theme ────────────────────────────────────────────── */
+[data-theme="green"] {
+  --bg: #f7faf8;
+  --text: #3a4a40;
+  --text-muted: #7a8a7e;
+  --heading: #1a2a1e;
+  --accent: #00a86b;
+  --accent-dim: rgba(0, 168, 107, 0.10);
+  --link: #008a52;
+  --link-hover: #00c470;
+  --border: rgba(0, 0, 0, 0.08);
+  --code-bg: rgba(0, 0, 0, 0.04);
+  --code-text: #3a6a50;
+  --install-bg: rgba(0, 168, 107, 0.06);
+  --install-border: rgba(0, 168, 107, 0.20);
+  --terminal-bg: #eaf2ec;
+  --terminal-text: #3a4a40;
+  --terminal-muted: #7a8a7e;
+  --terminal-prompt: #00a86b;
+  --footer-text: #8a9a8e;
+}
+
+/* ── Base ───────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  transition: background var(--transition), color var(--transition);
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--link-hover);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent-dim);
+}
+
+/* ── Page Container ─────────────────────────────────────────── */
+.page {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.hero {
+  padding-top: 120px;
+  margin-bottom: 80px;
+  text-align: center;
+}
+
+.logo {
+  color: var(--accent);
+  margin-bottom: 40px;
+}
+
+.logo svg {
+  width: 72px;
+  height: 72px;
+}
+
+.hero-tagline {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  font-weight: 400;
+}
+
+.hero-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 40px;
+  font-size: 0.9rem;
+}
+
+.hero-links a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+
+.hero-links a:hover {
+  color: var(--text);
+}
+
+.theme-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all var(--transition);
+  line-height: 1;
+}
+
+.theme-btn:hover {
+  color: var(--accent);
+}
+
+/* ── Install Block ──────────────────────────────────────────── */
+.install-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--install-bg);
+  border: 1px solid var(--install-border);
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin-bottom: 32px;
+}
+
+.install-block code {
+  font-size: 0.85rem;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  white-space: nowrap;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 6px;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.copy-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 10px 24px;
+  border-radius: 6px;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.download-btn:hover {
+  opacity: 0.85;
+  color: #fff;
+}
+
+.install-or {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ── Screenshot ───────────────────────────────────────────────── */
+.screenshot {
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.screenshot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ── Content ────────────────────────────────────────────────── */
+.content {
+  padding-bottom: 80px;
+}
+
+.content h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--heading);
+  margin-top: 48px;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.content h2:first-child {
+  margin-top: 64px;
+}
+
+.content p {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.code-block code {
+  font-size: 0.8rem;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 0;
+  margin-top: 40px;
+}
+
+.footer p {
+  font-size: 0.8rem;
+  color: var(--footer-text);
+}
+
+.footer a {
+  color: var(--footer-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer a:hover {
+  color: var(--text);
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .page {
+    padding: 0 20px;
+  }
+
+  .hero {
+    padding-top: 48px;
+  }
+
+  .install-block {
+    padding: 10px 12px;
+  }
+
+  .install-block code {
+    font-size: 0.72rem;
+  }
+}
