@@ -3,6 +3,8 @@
 //! Implements the `vte::Perform` trait to process ANSI/VT escape sequences
 //! and update the terminal state accordingly.
 
+use std::io::Write;
+
 use crate::terminal_state::TerminalState;
 use warp_terminal::model::grid::Dimensions;
 use vte::{Params, Perform};
@@ -10,11 +12,23 @@ use vte::{Params, Perform};
 /// A VTE parser handler that writes into a `TerminalState`.
 pub struct VteHandler<'a> {
     pub state: &'a mut TerminalState,
+    /// Optional PTY writer for sending responses (e.g. DSR cursor position).
+    pub writer: Option<&'a mut (dyn Write + Send)>,
 }
 
 impl<'a> VteHandler<'a> {
     pub fn new(state: &'a mut TerminalState) -> Self {
-        Self { state }
+        Self { state, writer: None }
+    }
+
+    pub fn with_writer(
+        state: &'a mut TerminalState,
+        writer: &'a mut (dyn Write + Send),
+    ) -> Self {
+        Self {
+            state,
+            writer: Some(writer),
+        }
     }
 }
 
@@ -239,8 +253,15 @@ impl Perform for VteHandler<'_> {
             'n' => {
                 // Device Status Report
                 if params.iter().next().and_then(|p| p.first().copied()) == Some(6) {
-                    // Cursor position report - handled by writing response to PTY
-                    log::trace!("DSR: cursor position report requested");
+                    // Cursor position report — respond with ESC[row;colR
+                    let row = self.state.cursor.row.saturating_add(1);
+                    let col = self.state.cursor.col.saturating_add(1);
+                    let response = format!("\x1b[{};{}R", row, col);
+                    log::trace!("DSR: cursor position report -> {}", response);
+                    if let Some(ref mut writer) = self.writer {
+                        let _ = writer.write_all(response.as_bytes());
+                        let _ = writer.flush();
+                    }
                 }
             }
             'r' => {

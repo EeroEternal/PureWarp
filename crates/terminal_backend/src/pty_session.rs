@@ -91,6 +91,7 @@ impl PtySession {
         // Background task: read PTY output and update terminal state
         let state_clone = state.clone();
         let update_tx_bg = update_tx.clone();
+        let writer_bg = writer.clone();
         tokio::task::spawn_blocking(move || {
             let mut reader = reader;
             let mut buf = [0u8; 4096];
@@ -107,7 +108,11 @@ impl PtySession {
                         // Feed bytes to VTE parser
                         let mut state = state_clone.lock().unwrap();
                         {
-                            let mut handler = VteHandler::new(&mut state);
+                            let mut writer_guard = writer_bg.lock().unwrap();
+                            let mut handler = VteHandler::with_writer(
+                                &mut state,
+                                &mut **writer_guard,
+                            );
                             for &byte in &buf[..n] {
                                 parser.advance(&mut handler, byte);
                             }
