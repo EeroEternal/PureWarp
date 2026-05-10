@@ -84,6 +84,20 @@ fn main() -> Result<()> {
 
     let _ = app_builder.run(move |ctx| {
         eprintln!("App callback invoked, adding window...");
+
+        // Preload a monospace font so it is ready before the first render.
+        use warpui::SingletonEntity as _;
+        let font_id = warpui::fonts::Cache::handle(ctx).update(
+            ctx,
+            |cache: &mut warpui::fonts::Cache, _| {
+                cache
+                    .load_system_font("Menlo")
+                    .or_else(|_| cache.load_system_font("Monaco"))
+                    .or_else(|_| cache.load_system_font("Courier"))
+                    .expect("Should load a monospace system font")
+            },
+        );
+
         let window_options = AddWindowOptions {
             window_bounds: WindowBounds::ExactSize(warpui::geometry::vector::vec2f(
                 700.0, 450.0,
@@ -92,7 +106,7 @@ fn main() -> Result<()> {
         };
         ctx.add_window(window_options, move |_cx| {
             eprintln!("Window factory called, creating RootView...");
-            root_view::RootView::new(terminal_state.clone(), pty.clone(), update_rx)
+            root_view::RootView::new(terminal_state.clone(), pty.clone(), update_rx, font_id)
         });
         eprintln!("Window added.");
     });

@@ -64,12 +64,17 @@ impl PtySession {
         let mut cmd = CommandBuilder::new(&shell);
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
-
-        // Identify terminal to shell
         cmd.env("TERM_PROGRAM", "purewarp");
-        // Suppress zsh's PROMPT_SP to avoid spurious '%' / blank lines.
-        cmd.arg("-o");
-        cmd.arg("NO_PROMPT_SP");
+
+        // Force interactive mode so the shell prints prompts and
+        // executes commands normally.
+        cmd.arg("-i");
+
+        // zsh-specific: suppress PROMPT_SP to avoid spurious '%' / blank lines.
+        if shell.ends_with("zsh") {
+            cmd.arg("-o");
+            cmd.arg("NO_PROMPT_SP");
+        }
 
         // Spawn the child process
         let child = pair

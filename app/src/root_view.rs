@@ -9,11 +9,11 @@ use terminal_backend::{PtySession, TerminalState};
 use warp_terminal::model::grid::Dimensions;
 use warpui::{
     elements::{
-        Container, DispatchEventResult, EventHandler, Flex, MainAxisSize, Padding,
-        ParentElement, Rect, Shrinkable, Stack, Text,
+        Container, DispatchEventResult, EventHandler, Flex, Padding,
+        ParentElement, Rect, Stack, Text,
     },
     fonts::FamilyId,
-    AppContext, Element, Entity, EventContext, FocusContext, SingletonEntity as _, TypedActionView,
+    AppContext, Element, Entity, EventContext, FocusContext, TypedActionView,
     View, ViewContext,
 };
 
@@ -40,12 +40,13 @@ impl RootView {
         terminal_state: Arc<Mutex<TerminalState>>,
         pty: Arc<Mutex<PtySession>>,
         update_rx: futures::channel::mpsc::UnboundedReceiver<()>,
+        font_id: FamilyId,
     ) -> Self {
         Self {
             terminal_state,
             pty,
             update_rx: RefCell::new(Some(update_rx)),
-            font_family: None,
+            font_family: Some(font_id),
             scroll_offset: Rc::new(RefCell::new(0)),
             blink_on: Rc::new(RefCell::new(true)),
         }
@@ -62,27 +63,23 @@ impl View for RootView {
     }
 
     fn render(&self, _app: &AppContext) -> Box<dyn Element> {
+        let fid = self.font_family.unwrap();
         let state = self.terminal_state.lock().unwrap();
         let bg_color = state.palette.background;
         let fg_color = state.palette.foreground;
         let cursor_color = state.palette.cursor;
         let cursor_row = state.cursor.row;
-        let _cursor_col = state.cursor.col;
+        let cursor_col = state.cursor.col;
         let cursor_visible = state.cursor.visible && *self.blink_on.borrow();
-        let font_family = self.font_family;
         let visible_count = state.visible_rows();
 
-        // ── Build display rows from scrollback + visible, respecting scroll offset ──
         let scroll_offset = *self.scroll_offset.borrow();
         let sb = state.scrollback_ref();
         let vis = state.visible_rows_ref();
         let sb_len = sb.len();
         let total = sb_len + vis.len();
-
-        // Which range of the combined buffer to show.
         let start = total.saturating_sub(visible_count + scroll_offset);
 
-        // Collect the rows for display.
         let mut display_rows: Vec<&warp_terminal::model::grid::row::Row> =
             Vec::with_capacity(visible_count);
         for i in start..(start + visible_count).min(total) {
@@ -93,64 +90,46 @@ impl View for RootView {
             }
         }
 
-        // ── Row-based rendering ──
+        // ── Per-cell Flex::row (no Shrinkable), Container for cursor cell ──
         let mut row_elements: Vec<Box<dyn Element>> = Vec::with_capacity(display_rows.len());
-
         for (row_idx, row) in display_rows.iter().enumerate() {
             let cells: &[warp_terminal::model::grid::cell::Cell] = &row[..];
-
-            // Cursor is only visible when scroll_offset == 0 (viewing the live area).
             let is_cursor_row = scroll_offset == 0
                 && cursor_visible
                 && row_idx + start == sb_len + cursor_row;
 
-            let row_element: Box<dyn Element> = if let Some(fid) = font_family {
-                // Build row string with spaces for control/null characters.
-                let row_text: String = cells
-                    .iter()
-                    .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
-                    .collect();
-                if is_cursor_row {
-                    Stack::new()
-                        .with_child(
-                            Rect::new()
-                                .with_background_color(cursor_color)
-                                .finish(),
-                        )
-                        .with_child(
-                            Text::new_inline(row_text, fid, FONT_SIZE)
+            let mut cell_elements: Vec<Box<dyn Element>> = Vec::with_capacity(cells.len());
+            for (col, cell) in cells.iter().enumerate() {
+                let ch = if cell.c == '\0' || cell.c.is_ascii_control() { ' ' } else { cell.c };
+                if is_cursor_row && col == cursor_col {
+                    cell_elements.push(
+                        Container::new(
+                            Text::new_inline(ch.to_string(), fid, FONT_SIZE)
                                 .with_color(bg_color)
                                 .finish(),
                         )
-                        .finish()
+                        .with_background_color(cursor_color)
+                        .finish(),
+                    );
                 } else {
-                    Text::new_inline(row_text, fid, FONT_SIZE)
-                        .with_color(fg_color)
-                        .finish()
+                    cell_elements.push(
+                        Text::new_inline(ch.to_string(), fid, FONT_SIZE)
+                            .with_color(fg_color)
+                            .finish(),
+                    );
                 }
-            } else {
-                let row_bg = if is_cursor_row {
-                    cursor_color
-                } else {
-                    bg_color
-                };
-                Rect::new().with_background_color(row_bg).finish()
-            };
-
-            row_elements.push(Shrinkable::new(1.0, row_element).finish());
+            }
+            row_elements.push(Flex::row().with_children(cell_elements).finish());
         }
 
         let grid = Flex::column()
-            .with_main_axis_size(MainAxisSize::Max)
             .with_children(row_elements)
             .finish();
 
-        // Padding: inset the grid from window edges (top has extra space).
         let padded_grid = Container::new(grid)
             .with_padding(Padding::uniform(16.0).with_top(32.0))
             .finish();
 
-        // Full-window background behind the grid.
         let content = Stack::new()
             .with_child(Rect::new().with_background_color(bg_color).finish())
             .with_child(padded_grid)
@@ -160,7 +139,6 @@ impl View for RootView {
         let scroll_offset_rc = self.scroll_offset.clone();
         let max_scroll = sb_len;
 
-        // ── Keyboard + scroll wheel events via outermost EventHandler ──
         EventHandler::new(content)
             .on_keydown(
                 move |_event_ctx: &mut EventContext,
@@ -183,12 +161,10 @@ impl View for RootView {
                       _modifiers: &warpui::event::ModifiersState|
                       -> DispatchEventResult {
                     let mut offset = scroll_offset_rc.borrow_mut();
-                    let lines = (delta.y().abs() / 20.0) as usize; // 20px per "line"
+                    let lines = (delta.y().abs() / 20.0) as usize;
                     if delta.y() > 0.0 {
-                        // Scroll up = go further back
                         *offset = (*offset + lines.max(1)).min(max_scroll);
                     } else if delta.y() < 0.0 {
-                        // Scroll down = go toward bottom
                         *offset = offset.saturating_sub(lines.max(1));
                     }
                     DispatchEventResult::StopPropagation
@@ -198,22 +174,6 @@ impl View for RootView {
     }
 
     fn on_focus(&mut self, _focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
-        // Lazily load a monospace font on first focus.
-        if self.font_family.is_none() {
-            let fid = warpui::fonts::Cache::handle(ctx).update(
-                ctx,
-                |cache: &mut warpui::fonts::Cache, _| {
-                    cache
-                        .load_system_font("Menlo")
-                        .or_else(|_| cache.load_system_font("Monaco"))
-                        .or_else(|_| cache.load_system_font("Courier"))
-                        .expect("Should load a monospace system font")
-                },
-            );
-            self.font_family = Some(fid);
-            ctx.notify();
-        }
-
         if let Some(rx) = self.update_rx.borrow_mut().take() {
             let stream = rx.map(|_| ());
             let scroll_offset = self.scroll_offset.clone();
