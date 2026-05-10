@@ -67,19 +67,10 @@ impl View for RootView {
         let fg_color = state.palette.foreground;
         let cursor_color = state.palette.cursor;
         let cursor_row = state.cursor.row;
-        let cursor_col = state.cursor.col;
+        let _cursor_col = state.cursor.col;
         let cursor_visible = state.cursor.visible && *self.blink_on.borrow();
         let font_family = self.font_family;
         let visible_count = state.visible_rows();
-
-        eprintln!(
-            "render: font={}, rows={}, cursor=({},{}), blink={}",
-            if font_family.is_some() { "Some" } else { "None" },
-            visible_count,
-            cursor_row,
-            cursor_col,
-            *self.blink_on.borrow(),
-        );
 
         // ── Build display rows from scrollback + visible, respecting scroll offset ──
         let scroll_offset = *self.scroll_offset.borrow();
@@ -113,19 +104,29 @@ impl View for RootView {
                 && cursor_visible
                 && row_idx + start == sb_len + cursor_row;
 
-            let row_element = if let Some(fid) = font_family {
-                // ── TEMPORARY: single-text per row for debugging ──
-                let row_text: String = cells.iter()
+            let row_element: Box<dyn Element> = if let Some(fid) = font_family {
+                // Build row string with spaces for control/null characters.
+                let row_text: String = cells
+                    .iter()
                     .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
                     .collect();
                 if is_cursor_row {
-                    let row_copy = row_text.clone();
                     Stack::new()
-                        .with_child(Rect::new().with_background_color(cursor_color).finish())
-                        .with_child(Text::new_inline(row_copy, fid, FONT_SIZE).with_color(bg_color).finish())
+                        .with_child(
+                            Rect::new()
+                                .with_background_color(cursor_color)
+                                .finish(),
+                        )
+                        .with_child(
+                            Text::new_inline(row_text, fid, FONT_SIZE)
+                                .with_color(bg_color)
+                                .finish(),
+                        )
                         .finish()
                 } else {
-                    Text::new_inline(row_text, fid, FONT_SIZE).with_color(fg_color).finish()
+                    Text::new_inline(row_text, fid, FONT_SIZE)
+                        .with_color(fg_color)
+                        .finish()
                 }
             } else {
                 let row_bg = if is_cursor_row {
