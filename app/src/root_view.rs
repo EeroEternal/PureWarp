@@ -13,7 +13,7 @@ use warpui::{
         ParentElement, Rect, Shrinkable, Stack, Text,
     },
     fonts::FamilyId,
-    AppContext, Element, Entity, EventContext, FocusContext, TypedActionView,
+    AppContext, Element, Entity, EventContext, FocusContext, SingletonEntity as _, TypedActionView,
     View, ViewContext,
 };
 
@@ -40,13 +40,12 @@ impl RootView {
         terminal_state: Arc<Mutex<TerminalState>>,
         pty: Arc<Mutex<PtySession>>,
         update_rx: futures::channel::mpsc::UnboundedReceiver<()>,
-        font_id: FamilyId,
     ) -> Self {
         Self {
             terminal_state,
             pty,
             update_rx: RefCell::new(Some(update_rx)),
-            font_family: Some(font_id),
+            font_family: None,
             scroll_offset: Rc::new(RefCell::new(0)),
             blink_on: Rc::new(RefCell::new(true)),
         }
@@ -72,6 +71,15 @@ impl View for RootView {
         let cursor_visible = state.cursor.visible && *self.blink_on.borrow();
         let font_family = self.font_family;
         let visible_count = state.visible_rows();
+
+        eprintln!(
+            "render: font={}, rows={}, cursor=({},{}), blink={}",
+            if font_family.is_some() { "Some" } else { "None" },
+            visible_count,
+            cursor_row,
+            cursor_col,
+            *self.blink_on.borrow(),
+        );
 
         // ── Build display rows from scrollback + visible, respecting scroll offset ──
         let scroll_offset = *self.scroll_offset.borrow();
@@ -106,50 +114,19 @@ impl View for RootView {
                 && row_idx + start == sb_len + cursor_row;
 
             let row_element = if let Some(fid) = font_family {
-                // ── Render every row as individual cells for stable layout ──
-                // (Cursor on/off must not change the layout, otherwise
-                //  text jitters horizontally during blink.)
-                let mut cell_elements: Vec<Box<dyn Element>> =
-                    Vec::with_capacity(cells.len());
-                let cursor_visible_on_this_row = is_cursor_row
-                    && cursor_col < cells.len();
-                for (col, cell) in cells.iter().enumerate() {
-                    let ch = if cell.c == '\0' || cell.c.is_ascii_control() {
-                        ' '
-                    } else {
-                        cell.c
-                    };
-                    if cursor_visible_on_this_row && col == cursor_col {
-                        // Cursor cell: inverted colors
-                        let cursor_cell = Stack::new()
-                            .with_child(
-                                Rect::new()
-                                    .with_background_color(cursor_color)
-                                    .finish(),
-                            )
-                            .with_child(
-                                Text::new_inline(ch.to_string(), fid, FONT_SIZE)
-                                    .with_color(bg_color)
-                                    .finish(),
-                            )
-                            .finish();
-                        cell_elements.push(
-                            Shrinkable::new(1.0, cursor_cell).finish(),
-                        );
-                    } else {
-                        let cell_element = Text::new_inline(
-                            ch.to_string(),
-                            fid,
-                            FONT_SIZE,
-                        )
-                        .with_color(fg_color)
-                        .finish();
-                        cell_elements.push(
-                            Shrinkable::new(1.0, cell_element).finish(),
-                        );
-                    }
+                // ── TEMPORARY: single-text per row for debugging ──
+                let row_text: String = cells.iter()
+                    .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
+                    .collect();
+                if is_cursor_row {
+                    let row_copy = row_text.clone();
+                    Stack::new()
+                        .with_child(Rect::new().with_background_color(cursor_color).finish())
+                        .with_child(Text::new_inline(row_copy, fid, FONT_SIZE).with_color(bg_color).finish())
+                        .finish()
+                } else {
+                    Text::new_inline(row_text, fid, FONT_SIZE).with_color(fg_color).finish()
                 }
-                Flex::row().with_children(cell_elements).finish()
             } else {
                 let row_bg = if is_cursor_row {
                     cursor_color
@@ -220,6 +197,22 @@ impl View for RootView {
     }
 
     fn on_focus(&mut self, _focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
+        // Lazily load a monospace font on first focus.
+        if self.font_family.is_none() {
+            let fid = warpui::fonts::Cache::handle(ctx).update(
+                ctx,
+                |cache: &mut warpui::fonts::Cache, _| {
+                    cache
+                        .load_system_font("Menlo")
+                        .or_else(|_| cache.load_system_font("Monaco"))
+                        .or_else(|_| cache.load_system_font("Courier"))
+                        .expect("Should load a monospace system font")
+                },
+            );
+            self.font_family = Some(fid);
+            ctx.notify();
+        }
+
         if let Some(rx) = self.update_rx.borrow_mut().take() {
             let stream = rx.map(|_| ());
             let scroll_offset = self.scroll_offset.clone();
@@ -236,6 +229,9 @@ impl View for RootView {
                 },
             );
         }
+
+        // Force a re-render on focus to ensure font textures are uploaded.
+        ctx.notify();
 
         // ── Cursor blink timer ──
         let blink_on = self.blink_on.clone();

@@ -9,9 +9,8 @@ use rust_embed::RustEmbed;
 use std::borrow::Cow;
 use terminal_backend::{PtySession, TerminalState};
 use warpui::{
-    fonts,
     platform::{self, WindowBounds},
-    AddWindowOptions, AssetProvider, SingletonEntity,
+    AddWindowOptions, AssetProvider,
 };
 
 #[derive(Clone, Copy, RustEmbed)]
@@ -91,19 +90,9 @@ fn main() -> Result<()> {
             )),
             ..Default::default()
         };
-        ctx.add_window(window_options, move |cx| {
+        ctx.add_window(window_options, move |_cx| {
             eprintln!("Window factory called, creating RootView...");
-            let fid = fonts::Cache::handle(cx).update(
-                cx,
-                |cache: &mut fonts::Cache, _| {
-                    cache
-                        .load_system_font("Menlo")
-                        .or_else(|_| cache.load_system_font("Monaco"))
-                        .or_else(|_| cache.load_system_font("Courier"))
-                        .expect("Should load a monospace system font")
-                },
-            );
-            root_view::RootView::new(terminal_state.clone(), pty.clone(), update_rx, fid)
+            root_view::RootView::new(terminal_state.clone(), pty.clone(), update_rx)
         });
         eprintln!("Window added.");
     });
