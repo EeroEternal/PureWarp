@@ -13,7 +13,7 @@ use warpui::{
         ParentElement, Rect, Shrinkable, Stack, Text,
     },
     fonts::FamilyId,
-    AppContext, Element, Entity, EventContext, FocusContext, SingletonEntity as _, TypedActionView,
+    AppContext, Element, Entity, EventContext, FocusContext, TypedActionView,
     View, ViewContext,
 };
 
@@ -26,7 +26,7 @@ pub struct RootView {
     terminal_state: Arc<Mutex<TerminalState>>,
     pty: Arc<Mutex<PtySession>>,
     update_rx: RefCell<Option<futures::channel::mpsc::UnboundedReceiver<()>>>,
-    /// Font family for rendering cell characters, loaded lazily on first focus.
+    /// Font family for rendering cell characters.
     font_family: Option<FamilyId>,
     /// How many lines the user has scrolled back (0 = at bottom, following output).
     scroll_offset: Rc<RefCell<usize>>,
@@ -40,12 +40,13 @@ impl RootView {
         terminal_state: Arc<Mutex<TerminalState>>,
         pty: Arc<Mutex<PtySession>>,
         update_rx: futures::channel::mpsc::UnboundedReceiver<()>,
+        font_id: FamilyId,
     ) -> Self {
         Self {
             terminal_state,
             pty,
             update_rx: RefCell::new(Some(update_rx)),
-            font_family: None,
+            font_family: Some(font_id),
             scroll_offset: Rc::new(RefCell::new(0)),
             blink_on: Rc::new(RefCell::new(true)),
         }
@@ -219,22 +220,6 @@ impl View for RootView {
     }
 
     fn on_focus(&mut self, _focus_ctx: &FocusContext, ctx: &mut ViewContext<Self>) {
-        // Lazily load a monospace font on first focus.
-        if self.font_family.is_none() {
-            let fid = warpui::fonts::Cache::handle(ctx).update(
-                ctx,
-                |cache: &mut warpui::fonts::Cache, _| {
-                    cache
-                        .load_system_font("Menlo")
-                        .or_else(|_| cache.load_system_font("Monaco"))
-                        .or_else(|_| cache.load_system_font("Courier"))
-                        .expect("Should load a monospace system font")
-                },
-            );
-            self.font_family = Some(fid);
-            ctx.notify();
-        }
-
         if let Some(rx) = self.update_rx.borrow_mut().take() {
             let stream = rx.map(|_| ());
             let scroll_offset = self.scroll_offset.clone();
