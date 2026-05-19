@@ -156,27 +156,27 @@ pub struct ThemeConfig {
 }
 
 fn default_background() -> String {
-    "#000000".to_string()
+    "#f6edda".to_string()
 }
 
 fn default_foreground() -> String {
-    "#cccccc".to_string()
+    "#005661".to_string()
 }
 
 fn default_cursor() -> String {
-    "#ffffff".to_string()
+    "#00c6e0".to_string()
 }
 
 fn default_palette() -> [String; 16] {
     [
         // Normal
-        "#000000".to_string(), "#cd0000".to_string(), "#00cd00".to_string(),
-        "#cdcd00".to_string(), "#0000ee".to_string(), "#cd00cd".to_string(),
-        "#00cdcd".to_string(), "#e5e5e5".to_string(),
+        "#003b42".to_string(), "#e34e1c".to_string(), "#00b368".to_string(),
+        "#f49725".to_string(), "#0094f0".to_string(), "#ff5792".to_string(),
+        "#00bdd6".to_string(), "#8ca6a6".to_string(),
         // Bright
-        "#7f7f7f".to_string(), "#ff0000".to_string(), "#00ff00".to_string(),
-        "#ffff00".to_string(), "#5c5cff".to_string(), "#ff00ff".to_string(),
-        "#00ffff".to_string(), "#ffffff".to_string(),
+        "#004d57".to_string(), "#ff4000".to_string(), "#00d17a".to_string(),
+        "#ff8c00".to_string(), "#0fa3ff".to_string(), "#ff6b9f".to_string(),
+        "#00cbe6".to_string(), "#bbc3c4".to_string(),
     ]
 }
 
