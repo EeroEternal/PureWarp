@@ -106,6 +106,7 @@ impl View for RootView {
                         Container::new(
                             Text::new_inline(ch.to_string(), fid, FONT_SIZE)
                                 .with_color(bg_color)
+                                .with_line_height_ratio(1.0)
                                 .finish(),
                         )
                         .with_background_color(cursor_color)
@@ -115,6 +116,7 @@ impl View for RootView {
                     cell_elements.push(
                         Text::new_inline(ch.to_string(), fid, FONT_SIZE)
                             .with_color(fg_color)
+                            .with_line_height_ratio(1.0)
                             .finish(),
                     );
                 }
