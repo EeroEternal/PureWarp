@@ -90,7 +90,9 @@ impl View for RootView {
             }
         }
 
-        // ── Per-cell Flex::row (no Shrinkable), Container for cursor cell ──
+        // ── Render each row as a single Text element (group by row) to avoid
+        // sub-pixel per-character spacing drift in Flex::row.  The cursor cell
+        // is the only element that needs separate rendering (for inverted colours).
         let mut row_elements: Vec<Box<dyn Element>> = Vec::with_capacity(display_rows.len());
         for (row_idx, row) in display_rows.iter().enumerate() {
             let cells: &[warp_terminal::model::grid::cell::Cell] = &row[..];
@@ -98,30 +100,55 @@ impl View for RootView {
                 && cursor_visible
                 && row_idx + start == sb_len + cursor_row;
 
-            let mut cell_elements: Vec<Box<dyn Element>> = Vec::with_capacity(cells.len());
-            for (col, cell) in cells.iter().enumerate() {
-                let ch = if cell.c == '\0' || cell.c.is_ascii_control() { ' ' } else { cell.c };
-                if is_cursor_row && col == cursor_col {
-                    cell_elements.push(
-                        Container::new(
-                            Text::new_inline(ch.to_string(), fid, FONT_SIZE)
-                                .with_color(bg_color)
-                                .with_line_height_ratio(1.0)
-                                .finish(),
-                        )
-                        .with_background_color(cursor_color)
-                        .finish(),
-                    );
-                } else {
-                    cell_elements.push(
-                        Text::new_inline(ch.to_string(), fid, FONT_SIZE)
+            // Build the full row string
+            let row_str: String = cells
+                .iter()
+                .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
+                .collect();
+
+            if is_cursor_row && cursor_col < row_str.len() {
+                // Split around the cursor cell so it can be shown with inverted colours.
+                let before = &row_str[..cursor_col];
+                let cursor_ch = &row_str[cursor_col..=cursor_col];
+                let after = &row_str[cursor_col + 1..];
+
+                let mut cursor_row_els: Vec<Box<dyn Element>> = Vec::with_capacity(3);
+                if !before.is_empty() {
+                    cursor_row_els.push(
+                        Text::new_inline(before.to_string(), fid, FONT_SIZE)
                             .with_color(fg_color)
                             .with_line_height_ratio(1.0)
                             .finish(),
                     );
                 }
+                cursor_row_els.push(
+                    Container::new(
+                        Text::new_inline(cursor_ch.to_string(), fid, FONT_SIZE)
+                            .with_color(bg_color)
+                            .with_line_height_ratio(1.0)
+                            .finish(),
+                    )
+                    .with_background_color(cursor_color)
+                    .finish(),
+                );
+                if !after.is_empty() {
+                    cursor_row_els.push(
+                        Text::new_inline(after.to_string(), fid, FONT_SIZE)
+                            .with_color(fg_color)
+                            .with_line_height_ratio(1.0)
+                            .finish(),
+                    );
+                }
+                row_elements.push(Flex::row().with_children(cursor_row_els).finish());
+            } else {
+                // No cursor on this row – single Text element.
+                row_elements.push(
+                    Text::new_inline(row_str, fid, FONT_SIZE)
+                        .with_color(fg_color)
+                        .with_line_height_ratio(1.0)
+                        .finish(),
+                );
             }
-            row_elements.push(Flex::row().with_children(cell_elements).finish());
         }
 
         let grid = Flex::column()
