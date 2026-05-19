@@ -93,7 +93,7 @@ fn default_cols() -> usize {
 }
 
 fn default_rows() -> usize {
-    24
+    32
 }
 
 fn default_scrollback() -> usize {
