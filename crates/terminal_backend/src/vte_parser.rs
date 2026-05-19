@@ -140,10 +140,12 @@ impl Perform for VteHandler<'_> {
     fn csi_dispatch(
         &mut self,
         params: &Params,
-        _intermediates: &[u8],
+        intermediates: &[u8],
         _ignore: bool,
         action: char,
     ) {
+        // Check for DEC private modes (prefixed with '?')
+        let _is_private = intermediates.contains(&b'?');
         match action {
             'A' => {
                 // Cursor Up
@@ -412,6 +414,25 @@ impl VteHandler<'_> {
                     self.state.mode.show_cursor = true;
                     self.state.cursor.visible = true;
                 }
+                47 => {
+                    // Alternate screen (without cursor save)
+                    self.state.enter_alt_screen();
+                }
+                1047 => {
+                    // Alternate screen (without cursor save)
+                    self.state.enter_alt_screen();
+                }
+                1048 => {
+                    // Save cursor
+                    self.state.cursor.saved_row = self.state.cursor.row;
+                    self.state.cursor.saved_col = self.state.cursor.col;
+                }
+                1049 => {
+                    // Save cursor + enter alternate screen
+                    self.state.cursor.saved_row = self.state.cursor.row;
+                    self.state.cursor.saved_col = self.state.cursor.col;
+                    self.state.enter_alt_screen();
+                }
                 2004 => self.state.mode.bracketed_paste = true,
                 _ => {}
             }
@@ -429,6 +450,25 @@ impl VteHandler<'_> {
                 25 => {
                     self.state.mode.show_cursor = false;
                     self.state.cursor.visible = false;
+                }
+                47 => {
+                    // Leave alternate screen (without cursor restore)
+                    self.state.leave_alt_screen();
+                }
+                1047 => {
+                    // Leave alternate screen (without cursor restore)
+                    self.state.leave_alt_screen();
+                }
+                1048 => {
+                    // Restore cursor
+                    self.state.cursor.row = self.state.cursor.saved_row;
+                    self.state.cursor.col = self.state.cursor.saved_col;
+                }
+                1049 => {
+                    // Leave alternate screen + restore cursor
+                    self.state.leave_alt_screen();
+                    self.state.cursor.row = self.state.cursor.saved_row;
+                    self.state.cursor.col = self.state.cursor.saved_col;
                 }
                 2004 => self.state.mode.bracketed_paste = false,
                 _ => {}

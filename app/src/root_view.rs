@@ -128,7 +128,7 @@ impl View for RootView {
 
         // Top padding only: room for macOS traffic-light buttons
         let padded_grid = Container::new(grid)
-            .with_padding(Padding::uniform(0.0).with_top(32.0))
+            .with_padding(Padding::uniform(0.0).with_top(32.0).with_left(8.0))
             .finish();
 
         let content = Stack::new()

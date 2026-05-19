@@ -122,6 +122,17 @@ pub struct TerminalState {
     pub scroll_region: Option<(usize, usize)>,
     /// Whether the terminal has been updated since the last render.
     pub dirty: bool,
+    /// Saved normal-screen state (visible rows + scrollback + cursor) for
+    /// alternate screen switching. None when on the normal screen.
+    alt_saved: Option<AltScreenState>,
+}
+
+/// State saved when switching to the alternate screen buffer.
+struct AltScreenState {
+    visible_rows: Vec<Row>,
+    scrollback: Vec<Row>,
+    cursor_row: usize,
+    cursor_col: usize,
 }
 
 impl Dimensions for TerminalState {
@@ -164,6 +175,7 @@ impl TerminalState {
             current_flags: Flags::empty(),
             scroll_region: None,
             dirty: true,
+            alt_saved: None,
         }
     }
 
@@ -504,5 +516,44 @@ impl TerminalState {
             );
         }
         self.dirty = true;
+    }
+
+    /// Enter alternate screen buffer, saving the normal screen state.
+    pub fn enter_alt_screen(&mut self) {
+        if self.alt_saved.is_some() {
+            return; // already on alt screen
+        }
+        self.alt_saved = Some(AltScreenState {
+            visible_rows: std::mem::take(&mut self.visible_rows),
+            scrollback: std::mem::take(&mut self.scrollback),
+            cursor_row: self.cursor.row,
+            cursor_col: self.cursor.col,
+        });
+        // Initialize blank alt screen
+        self.visible_rows = (0..self.rows).map(|_| Row::new(self.cols)).collect();
+        self.scrollback = Vec::new();
+        self.cursor.row = 0;
+        self.cursor.col = 0;
+        self.reset_sgr();
+        self.dirty = true;
+        self.mode.alt_screen = true;
+    }
+
+    /// Leave alternate screen buffer, restoring the normal screen state.
+    pub fn leave_alt_screen(&mut self) {
+        if let Some(saved) = self.alt_saved.take() {
+            self.visible_rows = saved.visible_rows;
+            self.scrollback = saved.scrollback;
+            self.cursor.row = saved.cursor_row;
+            self.cursor.col = saved.cursor_col;
+            self.reset_sgr();
+            self.dirty = true;
+        }
+        self.mode.alt_screen = false;
+    }
+
+    /// Check if we are on the alternate screen.
+    pub fn is_alt_screen(&self) -> bool {
+        self.mode.alt_screen
     }
 }
