@@ -9,7 +9,7 @@ use terminal_backend::{PtySession, TerminalState};
 use warp_terminal::model::grid::Dimensions;
 use warpui::{
     elements::{
-        Container, DispatchEventResult, EventHandler, Flex,
+        Container, DispatchEventResult, EventHandler, Flex, Padding,
         ParentElement, Rect, Stack, Text,
     },
     fonts::FamilyId,
@@ -126,9 +126,14 @@ impl View for RootView {
             .with_children(row_elements)
             .finish();
 
+        // Top padding only: room for macOS traffic-light buttons
+        let padded_grid = Container::new(grid)
+            .with_padding(Padding::uniform(0.0).with_top(32.0))
+            .finish();
+
         let content = Stack::new()
             .with_child(Rect::new().with_background_color(bg_color).finish())
-            .with_child(grid)
+            .with_child(padded_grid)
             .finish();
 
         let pty = self.pty.clone();
