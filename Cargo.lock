@@ -728,7 +728,7 @@ dependencies = [
 
 [[package]]
 name = "asset_cache"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-compat",
@@ -744,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "asset_macro"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1469,7 +1469,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "channel_versions"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1690,7 +1690,7 @@ dependencies = [
 
 [[package]]
 name = "command"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-process",
@@ -3065,7 +3065,7 @@ dependencies = [
 
 [[package]]
 name = "fuzzy_match"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "fuzzy-matcher",
 ]
@@ -4568,7 +4568,7 @@ dependencies = [
 
 [[package]]
 name = "markdown_parser"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "enum-iterator",
@@ -6323,7 +6323,7 @@ checksum = "40e24eee682d89fb193496edf918a7f407d30175b2e785fe057e4392dfd182e0"
 
 [[package]]
 name = "pure_warp"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -7366,7 +7366,7 @@ dependencies = [
 
 [[package]]
 name = "settings_value"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "instant",
@@ -7488,7 +7488,7 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "simple_logger"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-channel",
  "async-fs",
@@ -7726,7 +7726,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "sum_tree"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "arrayvec",
  "log",
@@ -7799,7 +7799,7 @@ dependencies = [
 
 [[package]]
 name = "syntax_tree"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "arborium",
  "futures",
@@ -7927,7 +7927,7 @@ dependencies = [
 
 [[package]]
 name = "terminal_backend"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "futures",
@@ -8758,7 +8758,7 @@ dependencies = [
 
 [[package]]
 name = "vim"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "itertools 0.14.0",
@@ -8843,7 +8843,7 @@ dependencies = [
 
 [[package]]
 name = "warp_completer"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -8929,7 +8929,7 @@ dependencies = [
 
 [[package]]
 name = "warp_editor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -8978,7 +8978,7 @@ dependencies = [
 
 [[package]]
 name = "warp_features"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "enum-iterator",
 ]
@@ -9038,7 +9038,7 @@ dependencies = [
 
 [[package]]
 name = "warp_util"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "content_inspector",
  "dirs",
@@ -9062,7 +9062,7 @@ dependencies = [
 
 [[package]]
 name = "warpui"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arboard",
@@ -9153,7 +9153,7 @@ dependencies = [
 
 [[package]]
 name = "warpui_core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arboard",
@@ -9231,7 +9231,7 @@ dependencies = [
 
 [[package]]
 name = "warpui_extras"
-version = "0.0.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-channel",
