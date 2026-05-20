@@ -155,9 +155,9 @@ impl View for RootView {
             .with_children(row_elements)
             .finish();
 
-        // Room for macOS traffic-light buttons + left margin.
+        // Top+left padding: avoid macOS traffic-light buttons
         let padded_grid = Container::new(grid)
-            .with_padding(Padding::uniform(0.0).with_top(32.0).with_left(8.0))
+            .with_padding(Padding::uniform(0.0).with_top(28.0).with_left(6.0))
             .finish();
 
         let content = Stack::new()
