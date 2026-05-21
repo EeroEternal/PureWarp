@@ -128,7 +128,30 @@ impl Perform for VteHandler<'_> {
                 }
             }
             Ok(10) | Ok(11) => {
-                // OSC 10/11: Set foreground/background color (query)
+                // OSC 10/11: query (or set) default fg/bg.  When the second
+                // param is `?` the client is asking us to report the colour.
+                // Cursor Agent and other modern TUIs use this to detect
+                // whether the terminal is light- or dark-themed and pick
+                // contrasting input-bar colours accordingly.
+                if params.len() >= 2 && params[1] == b"?" {
+                    let color = if code == Ok(10) {
+                        self.state.palette.foreground
+                    } else {
+                        self.state.palette.background
+                    };
+                    // OSC reply uses 16-bit hex per channel: duplicate the
+                    // 8-bit value (e.g. 0xf6 -> "f6f6").
+                    let reply = format!(
+                        "\x1b]{};rgb:{:02x}{:02x}/{:02x}{:02x}/{:02x}{:02x}\x07",
+                        code_str,
+                        color.r, color.r,
+                        color.g, color.g,
+                        color.b, color.b,
+                    );
+                    if let Some(writer) = self.writer.as_mut() {
+                        let _ = writer.write_all(reply.as_bytes());
+                    }
+                }
             }
             _ => {
                 log::trace!("Unhandled OSC code: {}", code_str);
@@ -566,9 +589,17 @@ impl VteHandler<'_> {
                 38 => {
                     // Extended foreground color
                     if i + 2 < params.len() && params[i + 1] == 5 {
-                        // 256-color mode
+                        // 256-color mode: 38;5;n
                         self.state.set_fg_color(params[i + 2] as usize);
                         i += 2;
+                    } else if i + 4 < params.len() && params[i + 1] == 2 {
+                        // Truecolor: 38;2;r;g;b
+                        self.state.set_fg_rgb(
+                            params[i + 2] as u8,
+                            params[i + 3] as u8,
+                            params[i + 4] as u8,
+                        );
+                        i += 4;
                     }
                 }
                 39 => {
@@ -581,8 +612,17 @@ impl VteHandler<'_> {
                 48 => {
                     // Extended background color
                     if i + 2 < params.len() && params[i + 1] == 5 {
+                        // 256-color mode: 48;5;n
                         self.state.set_bg_color(params[i + 2] as usize);
                         i += 2;
+                    } else if i + 4 < params.len() && params[i + 1] == 2 {
+                        // Truecolor: 48;2;r;g;b
+                        self.state.set_bg_rgb(
+                            params[i + 2] as u8,
+                            params[i + 3] as u8,
+                            params[i + 4] as u8,
+                        );
+                        i += 4;
                     }
                 }
                 49 => {

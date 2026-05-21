@@ -5,7 +5,10 @@ use std::thread;
 use std::time::Duration;
 
 use futures::StreamExt;
-use terminal_backend::{PtySession, TerminalState};
+use pathfinder_color::ColorU;
+use terminal_backend::{ColorPalette, PtySession, TerminalState};
+use warp_terminal::model::ansi::{Color as AnsiColor, NamedColor};
+use warp_terminal::model::grid::cell::{Cell, Flags};
 use warp_terminal::model::grid::Dimensions;
 use warpui::{
     elements::{
@@ -21,6 +24,94 @@ use warpui::{
 const FONT_SIZE: f32 = 14.0;
 
 use crate::terminal_view::terminal_keystroke_to_bytes;
+
+/// Resolve an ANSI cell color into a concrete RGBA color using the palette.
+fn resolve_color(c: &AnsiColor, palette: &ColorPalette, bold: bool) -> ColorU {
+    match c {
+        AnsiColor::Named(named) => match named {
+            NamedColor::Foreground | NamedColor::BrightForeground | NamedColor::DimForeground => {
+                palette.foreground
+            }
+            NamedColor::Background => palette.background,
+            NamedColor::Cursor => palette.cursor,
+            NamedColor::Black | NamedColor::DimBlack => palette.colors[0],
+            NamedColor::Red | NamedColor::DimRed => palette.colors[1],
+            NamedColor::Green | NamedColor::DimGreen => palette.colors[2],
+            NamedColor::Yellow | NamedColor::DimYellow => palette.colors[3],
+            NamedColor::Blue | NamedColor::DimBlue => palette.colors[4],
+            NamedColor::Magenta | NamedColor::DimMagenta => palette.colors[5],
+            NamedColor::Cyan | NamedColor::DimCyan => palette.colors[6],
+            NamedColor::White | NamedColor::DimWhite => palette.colors[7],
+            NamedColor::BrightBlack => palette.colors[8],
+            NamedColor::BrightRed => palette.colors[9],
+            NamedColor::BrightGreen => palette.colors[10],
+            NamedColor::BrightYellow => palette.colors[11],
+            NamedColor::BrightBlue => palette.colors[12],
+            NamedColor::BrightMagenta => palette.colors[13],
+            NamedColor::BrightCyan => palette.colors[14],
+            NamedColor::BrightWhite => palette.colors[15],
+        },
+        AnsiColor::Indexed(idx) => indexed_color(*idx, palette, bold),
+        AnsiColor::Spec(c) => *c,
+    }
+}
+
+/// Resolve a 256-color indexed value into RGBA.
+fn indexed_color(idx: u8, palette: &ColorPalette, bold: bool) -> ColorU {
+    if idx < 16 {
+        // Bold may shift 0..7 to bright variants 8..15
+        let i = if bold && idx < 8 { (idx + 8) as usize } else { idx as usize };
+        palette.colors[i]
+    } else if idx < 232 {
+        // 6x6x6 color cube
+        let n = idx - 16;
+        let r = (n / 36) % 6;
+        let g = (n / 6) % 6;
+        let b = n % 6;
+        let to_byte = |v: u8| if v == 0 { 0 } else { 55 + v * 40 };
+        ColorU::new(to_byte(r), to_byte(g), to_byte(b), 0xFF)
+    } else {
+        // 232..255: grayscale ramp
+        let v = 8 + (idx - 232).saturating_mul(10);
+        ColorU::new(v, v, v, 0xFF)
+    }
+}
+
+/// Returns true when the cell's background is the terminal's default background.
+fn is_default_bg(c: &AnsiColor) -> bool {
+    matches!(c, AnsiColor::Named(NamedColor::Background))
+}
+
+/// Returns true when the cell's foreground is the terminal's default foreground.
+fn is_default_fg(c: &AnsiColor) -> bool {
+    matches!(
+        c,
+        AnsiColor::Named(NamedColor::Foreground)
+            | AnsiColor::Named(NamedColor::BrightForeground)
+            | AnsiColor::Named(NamedColor::DimForeground)
+    )
+}
+
+/// Pick a high-contrast foreground when a cell has the default fg but an
+/// explicit background.  TUI programs designed for dark themes routinely
+/// emit `bg=black` while leaving `fg` at the default, expecting the
+/// terminal default fg to be light.  On a light theme that produces dark
+/// text on a dark bar, which is unreadable; this helper switches to a
+/// light fg whenever the explicit bg is dark enough.
+fn auto_contrast_fg(bg: ColorU, palette: &ColorPalette) -> ColorU {
+    // Rec. 601 luminance approximation, sufficient for picking light vs. dark.
+    let r = bg.r as f32;
+    let g = bg.g as f32;
+    let b = bg.b as f32;
+    let lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if lum < 128.0 {
+        // Dark bg: use the brightest neutral from the palette.
+        palette.colors[15] // BrightWhite
+    } else {
+        // Light bg: keep the theme's foreground colour.
+        palette.foreground
+    }
+}
 
 pub struct RootView {
     terminal_state: Arc<Mutex<TerminalState>>,
@@ -66,7 +157,6 @@ impl View for RootView {
         let fid = self.font_family.unwrap();
         let state = self.terminal_state.lock().unwrap();
         let bg_color = state.palette.background;
-        let fg_color = state.palette.foreground;
         let cursor_color = state.palette.cursor;
         let cursor_row = state.cursor.row;
         let cursor_col = state.cursor.col;
@@ -90,64 +180,110 @@ impl View for RootView {
             }
         }
 
-        // ── Render each row as a single Text element (group by row) to avoid
-        // sub-pixel per-character spacing drift in Flex::row.  The cursor cell
-        // is the only element that needs separate rendering (for inverted colours).
+        // ── Render each row by grouping consecutive cells with the same
+        // (fg, bg, flags) into runs.  Each run is a single Text element,
+        // optionally wrapped in a Container when it has a non-default
+        // background colour.  This keeps Flex::row sub-pixel drift to a
+        // minimum (one element per colour change instead of per character)
+        // while still letting TUI programs draw coloured bars / panels.
+        struct Run {
+            text: String,
+            fg: ColorU,
+            bg: ColorU,
+            has_bg: bool,
+            is_cursor: bool,
+        }
+
+        let palette = &state.palette;
         let mut row_elements: Vec<Box<dyn Element>> = Vec::with_capacity(display_rows.len());
         for (row_idx, row) in display_rows.iter().enumerate() {
-            let cells: &[warp_terminal::model::grid::cell::Cell] = &row[..];
+            let cells: &[Cell] = &row[..];
             let is_cursor_row = scroll_offset == 0
                 && cursor_visible
                 && row_idx + start == sb_len + cursor_row;
 
-            // Build the full row string
-            let row_str: String = cells
-                .iter()
-                .map(|c| if c.c == '\0' || c.c.is_ascii_control() { ' ' } else { c.c })
-                .collect();
+            let mut runs: Vec<Run> = Vec::new();
+            for (col, cell) in cells.iter().enumerate() {
+                let ch = if cell.c == '\0' || cell.c.is_ascii_control() {
+                    ' '
+                } else {
+                    cell.c
+                };
+                let is_cursor = is_cursor_row && col == cursor_col;
 
-            if is_cursor_row && cursor_col < row_str.len() {
-                // Split around the cursor cell so it can be shown with inverted colours.
-                let before = &row_str[..cursor_col];
-                let cursor_ch = &row_str[cursor_col..=cursor_col];
-                let after = &row_str[cursor_col + 1..];
+                if is_cursor {
+                    // Inverted cursor cell: solid cursor block, text uses bg colour.
+                    runs.push(Run {
+                        text: ch.to_string(),
+                        fg: bg_color,
+                        bg: cursor_color,
+                        has_bg: true,
+                        is_cursor: true,
+                    });
+                    continue;
+                }
 
-                let mut cursor_row_els: Vec<Box<dyn Element>> = Vec::with_capacity(3);
-                if !before.is_empty() {
-                    cursor_row_els.push(
-                        Text::new_inline(before.to_string(), fid, FONT_SIZE)
-                            .with_color(fg_color)
-                            .with_line_height_ratio(1.0)
+                let bold = cell.flags.contains(Flags::BOLD);
+                let mut bg = resolve_color(&cell.bg, palette, false);
+                let mut has_bg = !is_default_bg(&cell.bg);
+
+                // Auto-contrast: a cell with default fg on an explicit bg
+                // gets a fg derived from the bg's luminance, so TUI input
+                // bars/panels remain readable on light themes.
+                let mut fg = if has_bg && is_default_fg(&cell.fg) {
+                    auto_contrast_fg(bg, palette)
+                } else {
+                    resolve_color(&cell.fg, palette, bold)
+                };
+
+                if cell.flags.contains(Flags::INVERSE) {
+                    std::mem::swap(&mut fg, &mut bg);
+                    has_bg = true;
+                }
+
+                // Hidden text: render as space using bg colour for fg.
+                let render_ch = if cell.flags.contains(Flags::HIDDEN) { ' ' } else { ch };
+
+                if let Some(last) = runs.last_mut() {
+                    if !last.is_cursor
+                        && last.fg == fg
+                        && last.bg == bg
+                        && last.has_bg == has_bg
+                    {
+                        last.text.push(render_ch);
+                        continue;
+                    }
+                }
+                runs.push(Run {
+                    text: render_ch.to_string(),
+                    fg,
+                    bg,
+                    has_bg,
+                    is_cursor: false,
+                });
+            }
+
+            let mut row_els: Vec<Box<dyn Element>> = Vec::with_capacity(runs.len());
+            for run in runs {
+                let text_el = Text::new_inline(run.text, fid, FONT_SIZE)
+                    .with_color(run.fg)
+                    .with_line_height_ratio(1.0)
+                    .finish();
+                if run.has_bg {
+                    row_els.push(
+                        Container::new(text_el)
+                            .with_background_color(run.bg)
                             .finish(),
                     );
+                } else {
+                    row_els.push(text_el);
                 }
-                cursor_row_els.push(
-                    Container::new(
-                        Text::new_inline(cursor_ch.to_string(), fid, FONT_SIZE)
-                            .with_color(bg_color)
-                            .with_line_height_ratio(1.0)
-                            .finish(),
-                    )
-                    .with_background_color(cursor_color)
-                    .finish(),
-                );
-                if !after.is_empty() {
-                    cursor_row_els.push(
-                        Text::new_inline(after.to_string(), fid, FONT_SIZE)
-                            .with_color(fg_color)
-                            .with_line_height_ratio(1.0)
-                            .finish(),
-                    );
-                }
-                row_elements.push(Flex::row().with_children(cursor_row_els).finish());
+            }
+
+            if row_els.len() == 1 {
+                row_elements.push(row_els.into_iter().next().unwrap());
             } else {
-                // No cursor on this row – single Text element.
-                row_elements.push(
-                    Text::new_inline(row_str, fid, FONT_SIZE)
-                        .with_color(fg_color)
-                        .with_line_height_ratio(1.0)
-                        .finish(),
-                );
+                row_elements.push(Flex::row().with_children(row_els).finish());
             }
         }
 
@@ -166,6 +302,7 @@ impl View for RootView {
             .finish();
 
         let pty = self.pty.clone();
+        let pty_for_text = self.pty.clone();
         let scroll_offset_rc = self.scroll_offset.clone();
         let max_scroll = sb_len;
 
@@ -173,12 +310,41 @@ impl View for RootView {
             .on_keydown(
                 move |_event_ctx: &mut EventContext,
                       _app: &AppContext,
-                      keystroke: &warpui::keymap::Keystroke|
+                      keystroke: &warpui::keymap::Keystroke,
+                      _chars: &str,
+                      is_composing: bool|
                       -> DispatchEventResult {
+                    // When the IME (e.g. macOS Chinese pinyin) is composing,
+                    // the macOS host view dispatches KeyDown with
+                    // `is_composing = true`. We must NOT forward the raw
+                    // keystroke to the PTY in that case (otherwise pinyin
+                    // letters leak through), AND we must return
+                    // `PropagateToParent` so the host view's `handled` flag
+                    // stays false and the subsequent committed text can be
+                    // delivered via `TypedCharacters` (`on_typed_characters`).
+                    if is_composing {
+                        return DispatchEventResult::PropagateToParent;
+                    }
                     let bytes = terminal_keystroke_to_bytes(keystroke);
                     if !bytes.is_empty() {
                         if let Ok(pty_guard) = pty.lock() {
                             let _ = pty_guard.write_input(&bytes);
+                        }
+                    }
+                    DispatchEventResult::StopPropagation
+                },
+            )
+            .on_typed_characters(
+                move |_event_ctx: &mut EventContext,
+                      _app: &AppContext,
+                      chars: &str|
+                      -> DispatchEventResult {
+                    // IME-committed text (e.g. CJK characters).  Forward the
+                    // raw UTF-8 bytes to the PTY so the shell receives them
+                    // as if the user had typed them directly.
+                    if !chars.is_empty() {
+                        if let Ok(pty_guard) = pty_for_text.lock() {
+                            let _ = pty_guard.write_input(chars.as_bytes());
                         }
                     }
                     DispatchEventResult::StopPropagation

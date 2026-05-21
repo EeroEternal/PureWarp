@@ -1502,6 +1502,21 @@ fn create_window(
         }
     }
 
+    // Enable IME for non-Windows platforms (the Windows branch above already does this).
+    // On macOS this is required for the OS to route Chinese / Japanese / Korean IME
+    // events to the window. We also call `set_ime_cursor_area` once with a placeholder
+    // position because some macOS input methods refuse to activate until they know
+    // where the composition window should be drawn; this gets updated as soon as the
+    // app reports an active cursor position via `update_ime_position`.
+    #[cfg(not(windows))]
+    if let Ok(window) = created_window.as_ref() {
+        window.set_ime_allowed(true);
+        window.set_ime_cursor_area(
+            winit::dpi::LogicalPosition::new(0.0, 0.0),
+            winit::dpi::LogicalSize::new(16.0, 16.0),
+        );
+    }
+
     created_window
 }
 

@@ -12,7 +12,10 @@ use pathfinder_geometry::vector::Vector2F;
 use std::cell::RefCell;
 
 type Handler = Box<dyn FnMut(&mut EventContext, &AppContext, Vector2F) -> DispatchEventResult>;
-type KeyHandler = Box<dyn FnMut(&mut EventContext, &AppContext, &Keystroke) -> DispatchEventResult>;
+type KeyHandler = Box<
+    dyn FnMut(&mut EventContext, &AppContext, &Keystroke, &str, bool) -> DispatchEventResult,
+>;
+type TextHandler = Box<dyn FnMut(&mut EventContext, &AppContext, &str) -> DispatchEventResult>;
 type ScrollHandler = Box<
     dyn FnMut(&mut EventContext, &AppContext, &Vector2F, &ModifiersState) -> DispatchEventResult,
 >;
@@ -56,6 +59,7 @@ pub struct EventHandler {
     mouse_dragged: Option<RefCell<Handler>>,
     scroll_wheel: Option<RefCell<ScrollHandler>>,
     keydown: Option<RefCell<KeyHandler>>,
+    typed_characters: Option<RefCell<TextHandler>>,
     modifier_state_changed: Option<RefCell<ModifierStateChangedHandler>>,
     origin: Option<Point>,
     // This is a short-term solution for properly handling events on stacks. A stack will always
@@ -83,6 +87,7 @@ impl EventHandler {
             mouse_dragged: None,
             scroll_wheel: None,
             keydown: None,
+            typed_characters: None,
             modifier_state_changed: None,
             origin: None,
             child_max_z_index: None,
@@ -97,9 +102,21 @@ impl EventHandler {
 
     pub fn on_keydown<F>(mut self, callback: F) -> Self
     where
-        F: 'static + FnMut(&mut EventContext, &AppContext, &Keystroke) -> DispatchEventResult,
+        F: 'static
+            + FnMut(&mut EventContext, &AppContext, &Keystroke, &str, bool) -> DispatchEventResult,
     {
         self.keydown = Some(RefCell::new(Box::new(callback)));
+        self
+    }
+
+    /// Fires when the text input system produces a committed string of
+    /// characters (for example, IME-composed CJK text).  The committed
+    /// string can contain more than one character.
+    pub fn on_typed_characters<F>(mut self, callback: F) -> Self
+    where
+        F: 'static + FnMut(&mut EventContext, &AppContext, &str) -> DispatchEventResult,
+    {
+        self.typed_characters = Some(RefCell::new(Box::new(callback)));
         self
     }
 
@@ -323,9 +340,28 @@ impl Element for EventHandler {
                     return true;
                 }
             }
-            Some(Event::KeyDown { keystroke, .. }) => {
+            Some(Event::KeyDown {
+                keystroke,
+                chars,
+                is_composing,
+                ..
+            }) => {
                 if let Some(callback) = self.keydown.as_ref() {
-                    return match callback.borrow_mut()(ctx, app, keystroke) {
+                    return match callback.borrow_mut()(
+                        ctx,
+                        app,
+                        keystroke,
+                        chars.as_str(),
+                        *is_composing,
+                    ) {
+                        DispatchEventResult::PropagateToParent => false,
+                        DispatchEventResult::StopPropagation => true,
+                    };
+                }
+            }
+            Some(Event::TypedCharacters { chars }) => {
+                if let Some(callback) = self.typed_characters.as_ref() {
+                    return match callback.borrow_mut()(ctx, app, chars.as_str()) {
                         DispatchEventResult::PropagateToParent => false,
                         DispatchEventResult::StopPropagation => true,
                     };

@@ -22,9 +22,9 @@ impl Default for ColorPalette {
         use pathfinder_color::ColorU;
 
         Self {
-            // Noctis Lux theme
+            // Noctis Lux theme (adjusted ANSI 0 to light gray for better TUI compatibility)
             colors: [
-                ColorU::new(0x00, 0x3b, 0x42, 0xFF), // Black
+                ColorU::new(0xf5, 0xf5, 0xf5, 0xFF), // Black (light gray for input bars)
                 ColorU::new(0xe3, 0x4e, 0x1c, 0xFF), // Red
                 ColorU::new(0x00, 0xb3, 0x68, 0xFF), // Green
                 ColorU::new(0xf4, 0x97, 0x25, 0xFF), // Yellow
@@ -115,8 +115,11 @@ pub struct TerminalState {
     /// Color palette.
     pub palette: ColorPalette,
     /// Current SGR attributes (built up from CSI SGR sequences).
-    pub current_fg: Option<usize>, // index into palette or None for default
-    pub current_bg: Option<usize>,
+    /// `None` means the default fg/bg of the palette will be used at
+    /// render time.  When set, the stored `Color` is written verbatim
+    /// onto cells (supports indexed and truecolor).
+    pub current_fg: Option<warp_terminal::model::ansi::Color>,
+    pub current_bg: Option<warp_terminal::model::ansi::Color>,
     pub current_flags: Flags,
     /// Scroll region (top, bottom inclusive). None means full screen.
     pub scroll_region: Option<(usize, usize)>,
@@ -424,11 +427,19 @@ impl TerminalState {
         {
             let cell = self.cursor_cell_mut();
             cell.c = c;
-            if let Some(fg_idx) = cur_fg {
-                cell.fg = warp_terminal::model::ansi::Color::Indexed(fg_idx as u8);
+            if let Some(fg) = cur_fg {
+                cell.fg = fg;
+            } else {
+                cell.fg = warp_terminal::model::ansi::Color::Named(
+                    warp_terminal::model::ansi::NamedColor::Foreground,
+                );
             }
-            if let Some(bg_idx) = cur_bg {
-                cell.bg = warp_terminal::model::ansi::Color::Indexed(bg_idx as u8);
+            if let Some(bg) = cur_bg {
+                cell.bg = bg;
+            } else {
+                cell.bg = warp_terminal::model::ansi::Color::Named(
+                    warp_terminal::model::ansi::NamedColor::Background,
+                );
             }
             cell.flags = cur_flags;
         }
@@ -436,14 +447,32 @@ impl TerminalState {
         self.dirty = true;
     }
 
-    /// Set current SGR foreground color by ANSI index.
+    /// Set current SGR foreground color by ANSI index (0..255).
     pub fn set_fg_color(&mut self, idx: usize) {
-        self.current_fg = Some(idx);
+        self.current_fg = Some(warp_terminal::model::ansi::Color::Indexed(
+            idx.min(255) as u8,
+        ));
     }
 
-    /// Set current SGR background color by ANSI index.
+    /// Set current SGR background color by ANSI index (0..255).
     pub fn set_bg_color(&mut self, idx: usize) {
-        self.current_bg = Some(idx);
+        self.current_bg = Some(warp_terminal::model::ansi::Color::Indexed(
+            idx.min(255) as u8,
+        ));
+    }
+
+    /// Set current SGR foreground color to a 24-bit RGB value.
+    pub fn set_fg_rgb(&mut self, r: u8, g: u8, b: u8) {
+        self.current_fg = Some(warp_terminal::model::ansi::Color::Spec(
+            pathfinder_color::ColorU::new(r, g, b, 0xFF),
+        ));
+    }
+
+    /// Set current SGR background color to a 24-bit RGB value.
+    pub fn set_bg_rgb(&mut self, r: u8, g: u8, b: u8) {
+        self.current_bg = Some(warp_terminal::model::ansi::Color::Spec(
+            pathfinder_color::ColorU::new(r, g, b, 0xFF),
+        ));
     }
 
     /// Reset foreground to default.
