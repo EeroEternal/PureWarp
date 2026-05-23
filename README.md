@@ -4,6 +4,8 @@ A clean terminal core stripped from [Warp](https://www.warp.dev) — no AI, no c
 
 Lightweight, fast macOS terminal emulator rebuilt from the Warp codebase. AI, team collaboration, and telemetry removed. Only the high-performance Metal rendering engine remains.
 
+![PureWarp Screenshot](docs/screenshot.png)
+
 ## Features
 
 - **GPU-accelerated rendering** — Metal shaders draw all text directly on the GPU
