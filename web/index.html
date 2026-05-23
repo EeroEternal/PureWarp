@@ -7,7 +7,7 @@
   <meta name="description" content="A GPU-accelerated terminal emulator stripped from Warp — no AI, no cloud, just fast Metal rendering.">
   <meta property="og:title" content="PureWarp">
   <meta property="og:description" content="GPU-accelerated terminal emulator. No AI, no cloud, just speed.">
-  <meta property="og:url" content="https://purewarp.dev">
+  <meta property="og:url" content="https://intentloop.dev">
   <meta property="og:type" content="website">
   <link rel="icon" href="logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +37,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
           GitHub
         </a>
-        <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">◐</button>
+        <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">&#9680;</button>
       </div>
 
       <div class="install-block">
@@ -63,29 +63,29 @@
           <text x="320" y="23" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#6a7a90">purewarp</text>
 
           <!-- Prompt line 1 -->
-          <text x="20" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">❯</text>
+          <text x="20" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">&#10095;</text>
           <text x="38" y="70" font-family="JetBrains Mono,monospace" font-size="13" fill="#cdd6f4">uname -a</text>
 
           <!-- Output 1 -->
           <text x="20" y="96" font-family="JetBrains Mono,monospace" font-size="12" fill="#6a7a90">Darwin mac.local 24.4.0 arm64</text>
 
           <!-- Prompt line 2 -->
-          <text x="20" y="130" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">❯</text>
+          <text x="20" y="130" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">&#10095;</text>
           <text x="38" y="130" font-family="JetBrains Mono,monospace" font-size="13" fill="#cdd6f4">cargo build --release</text>
 
           <!-- Output 2 -->
           <text x="20" y="156" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Compiling</text>
-          <text x="110" y="156" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">terminal_backend v0.1.0</text>
+          <text x="110" y="156" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">terminal_backend v0.1.3</text>
           <text x="20" y="176" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Compiling</text>
-          <text x="110" y="176" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">warpui v0.0.0</text>
+          <text x="110" y="176" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">warpui v0.1.3</text>
           <text x="20" y="196" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Compiling</text>
-          <text x="110" y="196" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">pure_warp v0.1.0</text>
+          <text x="110" y="196" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">pure_warp v0.1.3</text>
           <text x="20" y="222" font-family="JetBrains Mono,monospace" font-size="12" fill="#a6e3a1">Finished</text>
           <text x="100" y="222" font-family="JetBrains Mono,monospace" font-size="12" fill="#f9e2af">release</text>
           <text x="170" y="222" font-family="JetBrains Mono,monospace" font-size="12" fill="#cdd6f4">[optimized] target(s) in 2.41s</text>
 
           <!-- Prompt line 3 -->
-          <text x="20" y="256" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">❯</text>
+          <text x="20" y="256" font-family="JetBrains Mono,monospace" font-size="13" fill="#00d4aa">&#10095;</text>
           <text x="38" y="256" font-family="JetBrains Mono,monospace" font-size="13" fill="#cdd6f4">ls -la crates/</text>
 
           <!-- Output 3 -->
@@ -128,34 +128,85 @@
         Runs your shell directly through a real pseudo-terminal. zsh, bash, fish — whatever you use, PureWarp connects to it natively. Full support for ANSI / VT100 / xterm escape sequences via a custom UTF-8 state-machine parser.
       </p>
 
+      <h2>Alternate screen &amp; TUI support</h2>
+      <p>
+        Full alternate screen buffer support (<code>CSI ?1047/1048/1049</code>) means TUI programs like vim, htop, less, and tmux work exactly as expected — switch between normal and alternate screens seamlessly.
+      </p>
+
       <h2>Scrollback that just works</h2>
       <p>
-        Up to 1,000 lines of scrollback history. Mouse wheel to scroll, and new output automatically snaps you back to the bottom. Configurable via TOML.
+        Up to 10,000 lines of scrollback history. Mouse wheel to scroll, and new output automatically snaps you back to the bottom. Configurable via TOML.
+      </p>
+
+      <h2>Per-cell truecolor</h2>
+      <p>
+        Full 24-bit truecolor rendering on a per-cell basis with automatic contrast adjustment. Every character can have its own foreground and background color — exactly as your CLI tools intend.
       </p>
 
       <h2>Custom theming</h2>
       <p>
-        Tweak colors, cursor style, and terminal behavior through a simple TOML config file. No GUI settings panels — edit your config, save, and see changes immediately.
+        Tweak fonts, colors, cursor style, and terminal size through a simple TOML config file at <code>~/.config/purewarp/config.toml</code>. No GUI settings panels — edit your config, save, and restart to apply.
       </p>
 
       <h2>Single binary</h2>
       <p>
-        Written in Rust. Compiles to a single, fast binary. Install via Homebrew, download the DMG, or build from source with Cargo. No runtime, no containers, no nonsense.
+        Written in Rust. Compiles to a single, fast binary. Download the DMG, install via Cargo, or build from source. No runtime, no containers, no nonsense.
       </p>
-      <div class="code-block">
-        <code>$ cargo install --git https://github.com/EeroEternal/PureWarp pure_warp</code>
-      </div>
 
       <h2>No bloat</h2>
       <p>
         No AI chat sidebar. No cloud sync. No team collaboration features. No sign-in wall. No telemetry phoning home. Just you, your shell, and a fast terminal.
       </p>
 
+      <h2>Configuration</h2>
+      <p>
+        Edit <code>~/.config/purewarp/config.toml</code> to customize PureWarp. All fields are optional — missing values fall back to sensible defaults.
+      </p>
+      <div class="code-block config-block">
+<pre><code>[shell]
+program = "/bin/zsh"           # Default: $SHELL or /bin/bash
+args = []
+
+[terminal]
+font_size = 14.0
+font_family = "JetBrains Mono" # Falls back to SF Mono / Menlo
+cursor_style = "block"         # block | underline | beam
+cols = 80
+rows = 24
+max_scrollback = 10000
+
+[theme]
+background = "#f6edda"
+foreground = "#005661"
+cursor = "#00c6e0"
+palette = [
+  "#003b42", "#e34e1c", "#00b368", "#f49725",
+  "#0094f0", "#ff5792", "#00bdd6", "#8ca6a6",
+  "#004d57", "#ff4000", "#00d17a", "#ff8c00",
+  "#0fa3ff", "#ff6b9f", "#00cbe6", "#bbc3c4",
+]</code></pre>
+      </div>
+
+      <h2>Keyboard Shortcuts</h2>
+      <table class="shortcuts-table">
+        <thead>
+          <tr><th>Category</th><th>Keys</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Input</td><td>All printable characters, Enter, Tab, Backspace, Delete, Escape</td></tr>
+          <tr><td>Navigation</td><td>Arrow keys, Home, End, PageUp, PageDown, Insert</td></tr>
+          <tr><td>Function keys</td><td>F1 &ndash; F12</td></tr>
+          <tr><td>Control codes</td><td>Ctrl+A &ndash; Ctrl+Z, Ctrl+[, Ctrl+\, Ctrl+]</td></tr>
+          <tr><td>Scrollback</td><td>Mouse wheel</td></tr>
+          <tr><td>IME</td><td>macOS native Chinese / Japanese / Korean input</td></tr>
+        </tbody>
+      </table>
+
     </section>
 
     <!-- ── Footer ─────────────────────────────────────── -->
     <footer class="footer">
-      <p>MIT Licensed · <a href="https://github.com/EeroEternal/PureWarp" target="_blank" rel="noopener">Source on GitHub</a></p>
+      <p>MIT Licensed &middot; <a href="https://github.com/EeroEternal/PureWarp" target="_blank" rel="noopener">Source on GitHub</a> &middot; <a href="https://github.com/EeroEternal/PureWarp/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></p>
     </footer>
 
   </main>

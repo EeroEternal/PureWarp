@@ -85,7 +85,7 @@ fn default_font_size() -> f32 {
 }
 
 fn default_font_family() -> String {
-    "Menlo".to_string()
+    "JetBrains Mono".to_string()
 }
 
 fn default_cols() -> usize {

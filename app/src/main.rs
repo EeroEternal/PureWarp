@@ -77,6 +77,7 @@ fn main() -> Result<()> {
 
     eprintln!("Creating app builder...");
 
+    let font_family = config.terminal.font_family.clone();
     let app_builder =
         platform::AppBuilder::new(platform::AppCallbacks::default(), Box::new(ASSETS), None);
 
@@ -87,11 +88,14 @@ fn main() -> Result<()> {
 
         // Preload a monospace font so it is ready before the first render.
         use warpui::SingletonEntity as _;
+        let font_family = font_family.clone();
         let font_id = warpui::fonts::Cache::handle(ctx).update(
             ctx,
             |cache: &mut warpui::fonts::Cache, _| {
                 cache
-                    .load_system_font("Menlo")
+                    .load_system_font(&font_family)
+                    .or_else(|_| cache.load_system_font("SF Mono"))
+                    .or_else(|_| cache.load_system_font("Menlo"))
                     .or_else(|_| cache.load_system_font("Monaco"))
                     .or_else(|_| cache.load_system_font("Courier"))
                     .expect("Should load a monospace system font")

@@ -172,22 +172,11 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
   background: var(--install-bg);
   border: 1px solid var(--install-border);
   border-radius: 8px;
-  padding: 14px 20px;
+  padding: 16px 24px;
   margin-bottom: 32px;
-}
-
-.install-block code {
-  font-size: 0.85rem;
-  background: none;
-  padding: 0;
-  color: var(--text);
-  white-space: nowrap;
-  flex: 1;
-  overflow-x: auto;
 }
 
 .copy-btn {
@@ -228,11 +217,6 @@ code {
 .download-btn:hover {
   opacity: 0.85;
   color: #fff;
-}
-
-.install-or {
-  color: var(--text-muted);
-  font-size: 0.8rem;
 }
 
 /* ── Screenshot ───────────────────────────────────────────────── */
@@ -292,6 +276,52 @@ code {
   white-space: nowrap;
 }
 
+.config-block pre {
+  margin: 0;
+}
+
+.config-block code {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  white-space: pre;
+  color: var(--code-text);
+}
+
+/* ── Shortcuts Table ─────────────────────────────────────────── */
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+}
+
+.shortcuts-table th,
+.shortcuts-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-table th {
+  font-weight: 600;
+  color: var(--heading);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shortcuts-table td:first-child {
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
+  width: 140px;
+}
+
+.shortcuts-table td:last-child {
+  color: var(--text);
+}
+
 /* ── Footer ─────────────────────────────────────────────────── */
 .footer {
   border-top: 1px solid var(--border);
@@ -330,5 +360,13 @@ code {
 
   .install-block code {
     font-size: 0.72rem;
+  }
+
+  .shortcuts-table td:first-child {
+    width: auto;
+  }
+
+  .config-block code {
+    font-size: 0.7rem;
   }
 }

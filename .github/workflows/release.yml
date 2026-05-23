@@ -15,9 +15,23 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Sync version to Info.plist
+        run: bash scripts/sync_version.sh
 
       - name: Build release binary
         run: cargo build --release -p pure_warp
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
 
       - name: Package DMG
         run: |
