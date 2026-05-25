@@ -19,6 +19,11 @@
 // associated object is released by the runtime when the window itself is deallocated.
 static const void *kWarpWindowDelegateAssocKey = &kWarpWindowDelegateAssocKey;
 
+// A flag set to 1 while the user is actively dragging a window edge (live
+// resize).  Read from Rust via `extern "C"` to defer terminal SIGWINCH until
+// the drag ends, preventing shell redraw spam that produces blank lines.
+int purewarp_is_live_resizing = 0;
+
 NSWindowStyleMask warpWindowMask = NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable |
                                    NSWindowStyleMaskResizable | NSWindowStyleMaskTitled;
 
@@ -138,6 +143,8 @@ NSNumber *previouslyActiveAppPID;
     WarpWindow *warp_window = notification.object;
     WarpHostView *warp_view = warp_window.contentView;
 
+    purewarp_is_live_resizing = 1;
+
     // This is a hack to get around `borrowMut` errors within the UI framework
     // caused by the fact that it incorrectly assumes that callbacks cannot
     // synchronously cause another callback to be triggered. To avoid this for now,
@@ -149,6 +156,7 @@ NSNumber *previouslyActiveAppPID;
 - (void)windowDidEndLiveResize:(NSNotification *)notification {
     WarpWindow *warp_window = notification.object;
     WarpHostView *warp_view = warp_window.contentView;
+    purewarp_is_live_resizing = 0;
     [warp_view setAsyncCallback:YES];
 }
 

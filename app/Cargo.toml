@@ -34,3 +34,5 @@ toml.workspace = true
 dirs.workspace = true
 rust-embed.workspace = true
 pathfinder_color.workspace = true
+cocoa.workspace = true
+objc.workspace = true

@@ -1,9 +1,16 @@
 use std::cell::RefCell;
+use std::ffi::CStr;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+#[allow(deprecated)]
+use cocoa::appkit::{NSPasteboard, NSPasteboardTypeString};
+#[allow(deprecated)]
+use cocoa::base::{id, nil};
+#[allow(deprecated)]
+use cocoa::foundation::NSString;
 use futures::StreamExt;
 use pathfinder_color::ColorU;
 use terminal_backend::{ColorPalette, PtySession, TerminalState};
@@ -24,6 +31,26 @@ use warpui::{
 const FONT_SIZE: f32 = 14.0;
 
 use crate::terminal_view::terminal_keystroke_to_bytes;
+
+/// Read plain text from the macOS clipboard (NSPasteboard).
+#[allow(deprecated)]
+fn read_clipboard_text() -> Option<String> {
+    unsafe {
+        let pboard = NSPasteboard::generalPasteboard(nil);
+        if pboard == nil {
+            return None;
+        }
+        let text: id = NSPasteboard::stringForType(pboard, NSPasteboardTypeString);
+        if text == nil {
+            return None;
+        }
+        let utf8 = text.UTF8String();
+        if utf8.is_null() {
+            return None;
+        }
+        CStr::from_ptr(utf8).to_str().ok().map(|s| s.to_string())
+    }
+}
 
 /// Resolve an ANSI cell color into a concrete RGBA color using the palette.
 fn resolve_color(c: &AnsiColor, palette: &ColorPalette, bold: bool) -> ColorU {
@@ -303,6 +330,8 @@ impl View for RootView {
 
         let pty = self.pty.clone();
         let pty_for_text = self.pty.clone();
+        let pty_for_paste = self.pty.clone();
+        let state_for_paste = self.terminal_state.clone();
         let scroll_offset_rc = self.scroll_offset.clone();
         let max_scroll = sb_len;
 
@@ -325,6 +354,31 @@ impl View for RootView {
                     if is_composing {
                         return DispatchEventResult::PropagateToParent;
                     }
+
+                    // Cmd+V: paste from clipboard
+                    if keystroke.cmd && keystroke.key == "v" {
+                        if let Some(text) = read_clipboard_text() {
+                            if !text.is_empty() {
+                                let bracketed = state_for_paste
+                                    .lock()
+                                    .map(|s| s.mode.bracketed_paste)
+                                    .unwrap_or(false);
+                                let mut data = Vec::new();
+                                if bracketed {
+                                    data.extend_from_slice(b"\x1b[200~");
+                                }
+                                data.extend_from_slice(text.as_bytes());
+                                if bracketed {
+                                    data.extend_from_slice(b"\x1b[201~");
+                                }
+                                if let Ok(pty_guard) = pty_for_paste.lock() {
+                                    let _ = pty_guard.write_input(&data);
+                                }
+                            }
+                        }
+                        return DispatchEventResult::StopPropagation;
+                    }
+
                     let bytes = terminal_keystroke_to_bytes(keystroke);
                     if !bytes.is_empty() {
                         if let Ok(pty_guard) = pty.lock() {
@@ -351,7 +405,7 @@ impl View for RootView {
                 },
             )
             .on_scroll_wheel(
-                move |_ctx: &mut EventContext,
+                move |ctx: &mut EventContext,
                       _app: &AppContext,
                       delta: &warpui::geometry::vector::Vector2F,
                       _modifiers: &warpui::event::ModifiersState|
@@ -363,6 +417,7 @@ impl View for RootView {
                     } else if delta.y() < 0.0 {
                         *offset = offset.saturating_sub(lines.max(1));
                     }
+                    ctx.notify();
                     DispatchEventResult::StopPropagation
                 },
             )

@@ -6327,10 +6327,12 @@ version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
+ "cocoa 0.26.0",
  "dirs",
  "env_logger",
  "futures",
  "log",
+ "objc",
  "pathfinder_color",
  "rust-embed",
  "serde",

@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use futures::channel::mpsc;
-use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, PtySize};
 
 use crate::terminal_state::TerminalState;
 use crate::vte_parser::VteHandler;
@@ -19,13 +19,13 @@ pub type PtyWriter = Arc<Mutex<Box<dyn Write + Send>>>;
 
 /// Represents an active PTY session connected to a user shell.
 pub struct PtySession {
+    /// Handle to the PTY master, kept for resize operations (TIOCSWINSZ).
+    master: Box<dyn MasterPty>,
     /// The writer end, shared with the input handler.
     pub writer: PtyWriter,
     /// Handle to the child process (as a ChildKiller for sending signals).
     #[allow(dead_code)]
     child: Box<dyn ChildKiller + Send + Sync>,
-    /// Channel sender for notifying renderer of terminal updates.
-    update_tx: mpsc::UnboundedSender<()>,
     /// Channel receiver for terminal updates. Stored so it stays alive
     /// and can be retrieved by the terminal view.
     update_rx: Option<mpsc::UnboundedReceiver<()>>,
@@ -137,9 +137,9 @@ impl PtySession {
         });
 
         Ok(Self {
+            master,
             writer,
             child: child.clone_killer(),
-            update_tx,
             update_rx: Some(update_rx),
         })
     }
@@ -155,6 +155,7 @@ impl PtySession {
     }
 
     /// Resize the PTY when the terminal window is resized.
+    /// Sends TIOCSWINSZ ioctl which triggers SIGWINCH to the child process.
     pub fn resize(&self, cols: u16, rows: u16) -> Result<()> {
         self.writer
             .lock()
@@ -162,14 +163,16 @@ impl PtySession {
             .flush()
             .ok();
 
-        log::info!("PTY resize requested: {}x{}", cols, rows);
+        self.master.resize(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        }).context("Failed to resize PTY")?;
+
+        log::info!("PTY resized to {}x{}", cols, rows);
 
         Ok(())
-    }
-
-    /// Get a sender for update notifications (to trigger re-renders).
-    pub fn update_sender(&self) -> mpsc::UnboundedSender<()> {
-        self.update_tx.clone()
     }
 
     /// Take the update receiver for use in a terminal view's update loop.
